@@ -13,7 +13,8 @@
   },
   "dependencies": {
     "@chakra-ui/react": "^3.5.1",
-    "@emotion/react": "^11.14.0"
+    "@emotion/react": "^11.14.0",
+    "react-icons": "^5.5.0"
   },
   "devDependencies": {
     "@storybook/addon-a11y": "^10.1.10",

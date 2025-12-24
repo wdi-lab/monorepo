@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { LoginForm } from './login-form';
+import { Box } from '../../chakra';
 
 const meta = {
   title: 'Components/LoginForm',
@@ -10,7 +11,13 @@ const meta = {
   tags: ['autodocs'],
   argTypes: {
     onSubmit: { action: 'submitted' },
+    onForgotPassword: { action: 'forgot-password' },
+    onSignUp: { action: 'sign-up' },
+    onGoogleSignIn: { action: 'google-sign-in' },
     title: {
+      control: 'text',
+    },
+    subtitle: {
       control: 'text',
     },
     emailLabel: {
@@ -28,6 +35,21 @@ const meta = {
     showTitle: {
       control: 'boolean',
     },
+    showSubtitle: {
+      control: 'boolean',
+    },
+    showRememberMe: {
+      control: 'boolean',
+    },
+    showForgotPassword: {
+      control: 'boolean',
+    },
+    showGoogleSignIn: {
+      control: 'boolean',
+    },
+    showSignUpLink: {
+      control: 'boolean',
+    },
   },
 } satisfies Meta<typeof LoginForm>;
 
@@ -38,14 +60,32 @@ export const Default: Story = {
   args: {},
 };
 
-export const CustomLabels: Story = {
+export const WithLogo: Story = {
   args: {
-    title: 'Welcome Back',
-    emailLabel: 'Email Address',
-    emailPlaceholder: 'your.email@example.com',
-    passwordLabel: 'Your Password',
-    passwordPlaceholder: '********',
-    submitButtonText: 'Login',
+    logo: (
+      <Box
+        width="12"
+        height="12"
+        bg="teal.500"
+        borderRadius="md"
+        display="inline-flex"
+        alignItems="center"
+        justifyContent="center"
+        color="white"
+        fontWeight="bold"
+      >
+        Logo
+      </Box>
+    ),
+  },
+};
+
+export const CustomContent: Story = {
+  args: {
+    title: 'Sign In',
+    subtitle: 'Access your account',
+    submitButtonText: 'Continue',
+    googleButtonText: 'Continue with Google',
   },
 };
 
@@ -62,15 +102,31 @@ export const WithErrors: Story = {
   },
 };
 
-export const WithoutTitle: Story = {
+export const MinimalWithoutOptionalFeatures: Story = {
   args: {
-    showTitle: false,
+    showSubtitle: false,
+    showRememberMe: false,
+    showForgotPassword: false,
+    showGoogleSignIn: false,
+    showSignUpLink: false,
   },
 };
 
-export const CustomTitle: Story = {
+export const WithoutTitle: Story = {
   args: {
-    title: 'Sign In to Your Account',
-    submitButtonText: 'Continue',
+    showTitle: false,
+    showSubtitle: false,
+  },
+};
+
+export const WithoutGoogleSignIn: Story = {
+  args: {
+    showGoogleSignIn: false,
+  },
+};
+
+export const WithoutSignUpLink: Story = {
+  args: {
+    showSignUpLink: false,
   },
 };
