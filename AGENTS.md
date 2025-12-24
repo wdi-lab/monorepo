@@ -1,5 +1,7 @@
 # Agent Guidelines for TanStack Start Monorepo
 
+test
+
 ## Commands
 
 - **Install**: `pnpm install` (requires Node.js >=22, pnpm >=10.26.2)
