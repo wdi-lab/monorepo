@@ -1,0 +1,86 @@
+name: Test
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-format:
+    name: Lint & Format Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.tool-versions'
+
+      - name: 📥 Monorepo install
+        uses: ./.github/actions/pnpm-install
+
+      - name: Run ESLint
+        run: pnpm lint
+
+      - name: Check code formatting
+        run: pnpm format:check
+
+  type-check:
+    name: Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.tool-versions'
+
+      - name: 📥 Monorepo install
+        uses: ./.github/actions/pnpm-install
+
+      - name: Run TypeScript type check
+        run: pnpm type-check
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.tool-versions'
+
+      - name: 📥 Monorepo install
+        uses: ./.github/actions/pnpm-install
+
+      - name: Run tests
+        run: pnpm test:run
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.tool-versions'
+
+      - name: 📥 Monorepo install
+        uses: ./.github/actions/pnpm-install
+
+      - name: Build project
+        run: pnpm build
