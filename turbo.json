@@ -1,10 +1,21 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["**/.env.*local"],
+  "globalDependencies": ["**/.env.*local", "tsconfig.json", "sst.config.ts"],
+  "globalEnv": ["NODE_ENV", "BUILD_ENV", "ENABLE_*"],
+  "globalPassThroughEnv": [
+    "AWS_*",
+    "CI",
+    "DD_*",
+    "INSTALLATION_SCRIPT_*",
+    "GH_*",
+    "GITHUB_SHA",
+    "NPM_TOKEN"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", "!.next/cache/**", ".output/**"]
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**", ".output/**"],
+      "passThroughEnv": ["NODE_OPTIONS"]
     },
     "start": {
       "dependsOn": ["build", "^start"]
@@ -26,6 +37,9 @@
     "test:run": {
       "dependsOn": ["^build"],
       "outputs": ["coverage/**"]
+    },
+    "deploy": {
+      "dependsOn": ["build", "^deploy"]
     }
   }
 }

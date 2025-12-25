@@ -1,5 +1,7 @@
 packages:
   - 'services/*'
+  - 'services/*/app'
+  - 'services/*/functions'
   - 'packages/*'
 
 catalog:
@@ -7,6 +9,8 @@ catalog:
   react-dom: ^19.2.3
   '@types/react': ^19.2.7
   '@types/react-dom': ^19.2.3
+  '@types/node': ^22
+  '@types/aws-lambda': ^8.10.159
   typescript: ^5.9.3
   zod: ^4.2.1
   vite: ^7.1.7

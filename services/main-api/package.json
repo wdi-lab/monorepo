@@ -1,0 +1,25 @@
+{
+  "name": "main-api-infra",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "sst dev",
+    "build": "sst build",
+    "deploy": "sst deploy",
+    "remove": "sst remove",
+    "console": "sst console",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "main-api-functions": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "aws-cdk-lib": "2.201.0",
+    "config-tsconfig": "workspace:*",
+    "constructs": "^10.3.0",
+    "sst": "^2.49.6",
+    "typescript": "catalog:"
+  }
+}

@@ -12,15 +12,16 @@
 
 ## Code Style
 
-- **Imports**: Use `ui` package for ALL Chakra UI components (never import from @chakra-ui directly), `workspace:*` for internal deps, `catalog:` for shared versions (react, typescript, zod, vitest, @testing-library/\*)
+- **Imports**: Use `ui` package for ALL Chakra UI components (never import from @chakra-ui directly), `workspace:*` for internal deps, `catalog:` for shared versions (react, typescript, zod, vitest, @testing-library/\*, @types/node, @types/aws-lambda)
 - **Formatting**: Prettier enforced (single quotes, semicolons, 2-space indentation, 80 char printWidth, ES5 trailing commas)
 - **Types**: Strict TypeScript with `strict: true`, `strictNullChecks: true`, no `any` (ESLint error), use Zod v4 for runtime validation
 - **Naming**: PascalCase for components/types, camelCase for functions/variables, file-based routing for TanStack Router (`index.tsx`, `about.tsx` in `routes/`)
 - **Components**: Use Chakra UI v3 composition pattern (`Component.Root`, `Component.Body`, etc.), all Chakra exports via `packages/ui/src/chakra.tsx`
 - **Testing**: Use Vitest with jsdom, custom render function from `~/test/test-utils.tsx` wraps components in ChakraProvider, mock TanStack Router with `createRouter`/`createRoute` helpers
 - **Error Handling**: ESLint warns on console (except console.warn/error), React 19 JSX transform (no React import needed)
-- **File Structure**: `services/` for apps, `packages/` for shared libs, `~/*` alias maps to `src/` in services
+- **File Structure**: `services/` for apps, `packages/` for shared libs, `~/*` alias maps to `src/` in services. Service source code in `./app` or `./functions` subdirs, infrastructure code (SST, infra/) at service root
+- **ESLint Configs**: Use `config-eslint/tanstack` for TanStack Start apps, `config-eslint/node` for Node.js services (like main-api), `config-eslint/react` for React libraries
 
 ## Project Context
 
-TanStack Start (React 19) + Chakra UI v3 monorepo with Turborepo, pnpm workspaces, and Vite. Main frontend at `services/main-ui` with SSR via TanStack Start. Flat ESLint config extends @tanstack/eslint-config. Test setup uses Vitest 4.x with @testing-library/react 16.x.
+TanStack Start (React 19) + Chakra UI v3 monorepo with Turborepo, pnpm workspaces, and Vite. Main frontend at `services/main-ui` with SSR via TanStack Start. Backend at `services/main-api` with SST + AWS Lambda. Flat ESLint config extends @tanstack/eslint-config. Test setup uses Vitest 4.x with @testing-library/react 16.x.

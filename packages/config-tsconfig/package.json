@@ -5,6 +5,8 @@
   "files": [
     "base.json",
     "react-library.json",
-    "tanstack.json"
+    "tanstack.json",
+    "sst.json",
+    "node.json"
   ]
 }
