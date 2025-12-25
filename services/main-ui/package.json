@@ -1,5 +1,5 @@
 {
-  "name": "main-ui-infra",
+  "name": "@infra/main-ui",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,15 +12,15 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "main-api-infra": "workspace:*",
-    "main-ui-app": "workspace:*",
-    "sst-constructs": "workspace:*"
+    "@infra/main-api": "workspace:*",
+    "@app/main-ui": "workspace:*",
+    "@lib/sst-constructs": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "aws-cdk-lib": "catalog:",
-    "config-eslint": "workspace:*",
-    "config-tsconfig": "workspace:*",
+    "@config/eslint": "workspace:*",
+    "@config/tsconfig": "workspace:*",
     "constructs": "catalog:",
     "cross-spawn": "^7.0.6",
     "esbuild": "^0.27.2",

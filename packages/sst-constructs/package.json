@@ -1,5 +1,5 @@
 {
-  "name": "sst-constructs",
+  "name": "@lib/sst-constructs",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -28,8 +28,8 @@
     "@types/cross-spawn": "^6.0.6",
     "@types/node": "catalog:",
     "aws-cdk-lib": "catalog:",
-    "config-eslint": "workspace:*",
-    "config-tsconfig": "workspace:*",
+    "@config/eslint": "workspace:*",
+    "@config/tsconfig": "workspace:*",
     "constructs": "catalog:",
     "eslint": "catalog:",
     "sst": "catalog:",

@@ -113,6 +113,12 @@ importers:
         specifier: ^13.0.0
         version: 13.0.0
     devDependencies:
+      '@config/eslint':
+        specifier: workspace:*
+        version: link:../config-eslint
+      '@config/tsconfig':
+        specifier: workspace:*
+        version: link:../config-tsconfig
       '@types/cross-spawn':
         specifier: ^6.0.6
         version: 6.0.6
@@ -122,12 +128,6 @@ importers:
       aws-cdk-lib:
         specifier: 2.233.0
         version: 2.233.0(constructs@10.3.0)
-      config-eslint:
-        specifier: workspace:*
-        version: link:../config-eslint
-      config-tsconfig:
-        specifier: workspace:*
-        version: link:../config-tsconfig
       constructs:
         specifier: 'catalog:'
         version: 10.3.0
@@ -156,6 +156,12 @@ importers:
         specifier: ^5.5.0
         version: 5.5.0(react@19.2.3)
     devDependencies:
+      '@config/eslint':
+        specifier: workspace:*
+        version: link:../config-eslint
+      '@config/tsconfig':
+        specifier: workspace:*
+        version: link:../config-tsconfig
       '@storybook/addon-a11y':
         specifier: ^10.1.10
         version: 10.1.10(storybook@10.1.10(@testing-library/dom@10.4.0)(prettier@3.7.4)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))
@@ -183,12 +189,6 @@ importers:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.0.16(@vitest/browser@4.0.16(vite@7.3.0(@types/node@22.19.3)(jiti@2.6.1)(tsx@4.21.0))(vitest@4.0.16))(vitest@4.0.16)
-      config-eslint:
-        specifier: workspace:*
-        version: link:../config-eslint
-      config-tsconfig:
-        specifier: workspace:*
-        version: link:../config-tsconfig
       eslint:
         specifier: 'catalog:'
         version: 9.39.2(jiti@2.6.1)
@@ -213,22 +213,22 @@ importers:
 
   services/main-api:
     dependencies:
-      main-api-functions:
+      '@functions/main-api':
         specifier: workspace:*
         version: link:functions
     devDependencies:
+      '@config/eslint':
+        specifier: workspace:*
+        version: link:../../packages/config-eslint
+      '@config/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/config-tsconfig
       '@types/node':
         specifier: 'catalog:'
         version: 22.19.3
       aws-cdk-lib:
         specifier: 2.233.0
         version: 2.233.0(constructs@10.3.0)
-      config-eslint:
-        specifier: workspace:*
-        version: link:../../packages/config-eslint
-      config-tsconfig:
-        specifier: workspace:*
-        version: link:../../packages/config-tsconfig
       constructs:
         specifier: 'catalog:'
         version: 10.3.0
@@ -251,6 +251,12 @@ importers:
         specifier: ^4.0.0
         version: 4.0.0
     devDependencies:
+      '@config/eslint':
+        specifier: workspace:*
+        version: link:../../../packages/config-eslint
+      '@config/tsconfig':
+        specifier: workspace:*
+        version: link:../../../packages/config-tsconfig
       '@types/aws-lambda':
         specifier: 'catalog:'
         version: 8.10.159
@@ -260,12 +266,6 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 22.19.3
-      config-eslint:
-        specifier: workspace:*
-        version: link:../../../packages/config-eslint
-      config-tsconfig:
-        specifier: workspace:*
-        version: link:../../../packages/config-tsconfig
       eslint:
         specifier: 'catalog:'
         version: 9.39.2(jiti@2.6.1)
@@ -275,28 +275,28 @@ importers:
 
   services/main-ui:
     dependencies:
-      main-api-infra:
-        specifier: workspace:*
-        version: link:../main-api
-      main-ui-app:
+      '@app/main-ui':
         specifier: workspace:*
         version: link:app
-      sst-constructs:
+      '@infra/main-api':
+        specifier: workspace:*
+        version: link:../main-api
+      '@lib/sst-constructs':
         specifier: workspace:*
         version: link:../../packages/sst-constructs
     devDependencies:
+      '@config/eslint':
+        specifier: workspace:*
+        version: link:../../packages/config-eslint
+      '@config/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/config-tsconfig
       '@types/node':
         specifier: 'catalog:'
         version: 22.19.3
       aws-cdk-lib:
         specifier: 2.233.0
         version: 2.233.0(constructs@10.3.0)
-      config-eslint:
-        specifier: workspace:*
-        version: link:../../packages/config-eslint
-      config-tsconfig:
-        specifier: workspace:*
-        version: link:../../packages/config-tsconfig
       constructs:
         specifier: 'catalog:'
         version: 10.3.0
@@ -321,6 +321,9 @@ importers:
 
   services/main-ui/app:
     dependencies:
+      '@lib/ui':
+        specifier: workspace:*
+        version: link:../../../packages/ui
       '@tanstack/react-router':
         specifier: ^1.143.4
         version: 1.143.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -336,13 +339,16 @@ importers:
       react-dom:
         specifier: 'catalog:'
         version: 19.2.3(react@19.2.3)
-      ui:
-        specifier: workspace:*
-        version: link:../../../packages/ui
       zod:
         specifier: 'catalog:'
         version: 4.2.1
     devDependencies:
+      '@config/eslint':
+        specifier: workspace:*
+        version: link:../../../packages/config-eslint
+      '@config/tsconfig':
+        specifier: workspace:*
+        version: link:../../../packages/config-tsconfig
       '@testing-library/jest-dom':
         specifier: 'catalog:'
         version: 6.9.1
@@ -367,12 +373,6 @@ importers:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.0.16(@vitest/browser@4.0.16(vite@7.3.0(@types/node@20.19.27)(jiti@2.6.1)(tsx@4.21.0))(vitest@4.0.16))(vitest@4.0.16)
-      config-eslint:
-        specifier: workspace:*
-        version: link:../../../packages/config-eslint
-      config-tsconfig:
-        specifier: workspace:*
-        version: link:../../../packages/config-tsconfig
       eslint:
         specifier: 'catalog:'
         version: 9.39.2(jiti@2.6.1)

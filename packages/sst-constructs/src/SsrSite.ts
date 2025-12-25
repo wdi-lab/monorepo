@@ -92,8 +92,8 @@ import { ApiGatewayV1Api, ApiGatewayV1ApiRouteProps } from 'sst/constructs';
 import { transformSync } from 'esbuild';
 
 // override dirname to sst package path, to ensure correct resolution of support files
-const require = createRequire(import.meta.url);
-const __dirname = path.join(require.resolve('sst'));
+const __require = createRequire(import.meta.url);
+const __dirname = path.join(__require.resolve('sst'));
 
 export type CloudFrontFunctionConfig = {
   constructId: string;

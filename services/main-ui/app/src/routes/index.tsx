@@ -16,7 +16,7 @@ import {
   Text,
   Timeline,
   VStack,
-} from 'ui';
+} from '@lib/ui';
 import z from 'zod';
 
 export const Route = createFileRoute('/')({

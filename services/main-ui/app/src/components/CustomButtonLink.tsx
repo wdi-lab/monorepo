@@ -1,4 +1,4 @@
-import { Button } from 'ui';
+import { Button } from '@lib/ui';
 import { Link } from '@tanstack/react-router';
 import React from 'react';
 
