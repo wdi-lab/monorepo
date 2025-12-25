@@ -1,5 +1,5 @@
 {
-  "name": "main-ui",
+  "name": "main-ui-app",
   "version": "0.0.0",
   "private": true,
   "sideEffects": false,

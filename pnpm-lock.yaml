@@ -221,7 +221,7 @@ importers:
         specifier: 'catalog:'
         version: 5.9.3
 
-  services/main-ui:
+  services/main-ui/app:
     dependencies:
       '@tanstack/react-router':
         specifier: ^1.143.4
@@ -240,7 +240,7 @@ importers:
         version: 19.2.3(react@19.2.3)
       ui:
         specifier: workspace:*
-        version: link:../../packages/ui
+        version: link:../../../packages/ui
       zod:
         specifier: 'catalog:'
         version: 4.2.1
@@ -271,10 +271,10 @@ importers:
         version: 4.0.16(@vitest/browser@4.0.16(vite@7.3.0(@types/node@20.19.27)(jiti@2.6.1)(tsx@4.21.0))(vitest@4.0.16))(vitest@4.0.16)
       config-eslint:
         specifier: workspace:*
-        version: link:../../packages/config-eslint
+        version: link:../../../packages/config-eslint
       config-tsconfig:
         specifier: workspace:*
-        version: link:../../packages/config-tsconfig
+        version: link:../../../packages/config-tsconfig
       eslint:
         specifier: 'catalog:'
         version: 9.39.2(jiti@2.6.1)
