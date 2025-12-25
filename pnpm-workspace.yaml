@@ -1,23 +1,30 @@
 packages:
-  - 'services/*'
-  - 'services/*/app'
-  - 'services/*/functions'
-  - 'packages/*'
+  - services/*
+  - services/*/app
+  - services/*/functions
+  - packages/*
 
 catalog:
-  react: ^19.2.3
-  react-dom: ^19.2.3
+  '@testing-library/jest-dom': ^6.9.1
+  '@testing-library/react': ^16.3.1
+  '@testing-library/user-event': ^14.6.1
+  '@types/aws-lambda': ^8.10.159
+  '@types/node': ^22
   '@types/react': ^19.2.7
   '@types/react-dom': ^19.2.3
-  '@types/node': ^22
-  '@types/aws-lambda': ^8.10.159
+  '@vitest/browser-playwright': ^4.0.16
+  '@vitest/coverage-v8': ^4.0.16
+  aws-cdk-lib: 2.201.0
+  constructs: 10.3.0
+  eslint: ^9.39.2
+  react: ^19.2.3
+  react-dom: ^19.2.3
+  sst: 2.49.6
   typescript: ^5.9.3
-  zod: ^4.2.1
   vite: ^7.1.7
   vitest: ^4.0.16
-  '@vitest/coverage-v8': ^4.0.16
-  '@vitest/browser-playwright': ^4.0.16
-  '@testing-library/react': ^16.3.1
-  '@testing-library/jest-dom': ^6.9.1
-  '@testing-library/user-event': ^14.6.1
-  eslint: ^9.39.2
+  zod: ^4.2.1
+
+overrides:
+  aws-cdk-lib: 2.233.0
+#   constructs: 10.4.3

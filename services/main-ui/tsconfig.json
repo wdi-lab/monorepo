@@ -1,0 +1,5 @@
+{
+  "extends": "config-tsconfig/sst.json",
+  "include": ["sst.config.ts", "infra/**/*.ts"],
+  "exclude": ["node_modules", "app"]
+}

@@ -13,7 +13,13 @@ export default defineConfig({
       projects: ['./tsconfig.json'],
     }),
     tanstackStart(),
-    nitro(),
+    nitro({
+      preset: 'aws-lambda',
+      inlineDynamicImports: true,
+      awsLambda: {
+        streaming: true,
+      },
+    }),
     viteReact(),
   ],
 });
