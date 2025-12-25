@@ -213,7 +213,7 @@ importers:
 
   services/main-api:
     dependencies:
-      main-api-functions:
+      '@functions/main-api':
         specifier: workspace:*
         version: link:functions
     devDependencies:
@@ -275,13 +275,13 @@ importers:
 
   services/main-ui:
     dependencies:
-      main-api-infra:
-        specifier: workspace:*
-        version: link:../main-api
-      main-ui-app:
+      '@app/main-ui':
         specifier: workspace:*
         version: link:app
-      sst-constructs:
+      '@infra/main-api':
+        specifier: workspace:*
+        version: link:../main-api
+      '@lib/sst-constructs':
         specifier: workspace:*
         version: link:../../packages/sst-constructs
     devDependencies:
@@ -321,6 +321,9 @@ importers:
 
   services/main-ui/app:
     dependencies:
+      '@lib/ui':
+        specifier: workspace:*
+        version: link:../../../packages/ui
       '@tanstack/react-router':
         specifier: ^1.143.4
         version: 1.143.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -336,9 +339,6 @@ importers:
       react-dom:
         specifier: 'catalog:'
         version: 19.2.3(react@19.2.3)
-      ui:
-        specifier: workspace:*
-        version: link:../../../packages/ui
       zod:
         specifier: 'catalog:'
         version: 4.2.1

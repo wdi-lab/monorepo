@@ -1,5 +1,5 @@
 import { StackContext } from 'sst/constructs';
-import { NitroSite } from 'sst-constructs';
+import { NitroSite } from '@lib/sst-constructs';
 
 export function Main(context: StackContext) {
   const { stack } = context;

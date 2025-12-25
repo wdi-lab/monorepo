@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react';
-import { ChakraProvider, defaultSystem } from 'ui';
+import { ChakraProvider, defaultSystem } from '@lib/ui';
 import type { RenderOptions } from '@testing-library/react';
 import type { ReactElement } from 'react';
 

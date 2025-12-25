@@ -1,5 +1,5 @@
 {
-  "name": "main-api-infra",
+  "name": "@infra/main-api",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "main-api-functions": "workspace:*"
+    "@functions/main-api": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",

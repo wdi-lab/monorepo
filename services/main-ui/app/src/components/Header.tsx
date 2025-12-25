@@ -1,4 +1,4 @@
-import { Box, Flex, HStack } from 'ui';
+import { Box, Flex, HStack } from '@lib/ui';
 import { CustomLink } from './CustomLink';
 
 export function Header() {

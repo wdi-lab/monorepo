@@ -20,7 +20,7 @@ import {
   Text,
   Textarea,
   VStack,
-} from 'ui';
+} from '@lib/ui';
 import { useState } from 'react';
 
 export const Route = createFileRoute('/about')({

@@ -6,7 +6,7 @@ import {
   Scripts,
   createRootRoute,
 } from '@tanstack/react-router';
-import { Box, Container, UIProvider } from 'ui';
+import { Box, Container, UIProvider } from '@lib/ui';
 import React from 'react';
 import { Header } from '~/components/Header';
 

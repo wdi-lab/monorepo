@@ -1,4 +1,4 @@
-import { ChakraLink } from 'ui';
+import { ChakraLink } from '@lib/ui';
 import { Link } from '@tanstack/react-router';
 import React from 'react';
 
