@@ -17,8 +17,8 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "aws-cdk-lib": "catalog:",
-    "config-tsconfig": "workspace:*",
-    "config-eslint": "workspace:*",
+    "@config/tsconfig": "workspace:*",
+    "@config/eslint": "workspace:*",
     "constructs": "catalog:",
     "sst": "catalog:",
     "typescript": "catalog:",

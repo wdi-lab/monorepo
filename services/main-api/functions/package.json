@@ -24,8 +24,8 @@
     "@types/aws-lambda": "catalog:",
     "@types/express": "^4",
     "typescript": "catalog:",
-    "config-tsconfig": "workspace:*",
-    "config-eslint": "workspace:*",
+    "@config/tsconfig": "workspace:*",
+    "@config/eslint": "workspace:*",
     "eslint": "catalog:"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "extends": "config-tsconfig/sst.json",
+  "extends": "@config/tsconfig/sst.json",
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src"
