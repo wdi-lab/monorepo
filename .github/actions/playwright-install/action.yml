@@ -1,0 +1,69 @@
+########################################################################################
+# "playwright install" composite action with browser caching                          #
+#--------------------------------------------------------------------------------------#
+# Requirements:                                                                        #
+#   - @setup/node should be run before                                                 #
+#   - pnpm install should be run before (to have Playwright package available)        #
+#                                                                                      #
+# Usage in workflow steps:                                                             #
+#                                                                                      #
+#      - name: 🎭 Install Playwright browsers                                          #
+#        uses: ./.github/actions/playwright-install                                    #
+#        with:                                                                         #
+#          browsers: chromium # (default = 'chromium', can be 'all' or space-separated)#
+#                                                                                      #
+# Features:                                                                            #
+#   - Automatically extracts Playwright version from root package.json                 #
+#   - Caches browsers by OS and Playwright version (~30s faster on cache hits)        #
+#   - Only installs system dependencies when cache is hit (much faster)               #
+########################################################################################
+
+name: 'Playwright Install'
+description: 'Install Playwright browsers with intelligent caching'
+
+inputs:
+  browsers:
+    description: 'Browsers to install (chromium, firefox, webkit, all, or space-separated list)'
+    required: false
+    default: 'chromium'
+
+runs:
+  using: 'composite'
+
+  steps:
+    # Get the installed Playwright version for cache key
+    - name: Get Playwright version
+      id: playwright-version
+      shell: bash
+      run: |
+        VERSION=$(pnpm list playwright --depth=0 --json 2>/dev/null | jq -r '.[0].devDependencies.playwright.version')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Playwright version: $VERSION"
+
+    # Cache Playwright browsers to speed up subsequent runs
+    # Cache key includes OS and Playwright version
+    - name: Cache Playwright browsers
+      uses: actions/cache@v4
+      id: playwright-cache
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}-${{ inputs.browsers }}
+        restore-keys: |
+          ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}-
+          ${{ runner.os }}-playwright-
+
+    # Only install browsers if cache miss (saves ~30s per run)
+    - name: Install Playwright browsers
+      if: steps.playwright-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        echo "Cache miss - installing Playwright browsers with system dependencies"
+        pnpm exec playwright install --with-deps ${{ inputs.browsers }}
+
+    # If cache hit, only install system dependencies (much faster)
+    - name: Install Playwright system dependencies
+      if: steps.playwright-cache.outputs.cache-hit == 'true'
+      shell: bash
+      run: |
+        echo "Cache hit - installing only system dependencies"
+        pnpm exec playwright install-deps ${{ inputs.browsers }}

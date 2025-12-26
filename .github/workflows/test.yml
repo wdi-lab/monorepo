@@ -10,6 +10,7 @@ on:
 # - type-check: TypeScript type checking
 # - test: Unit tests for all packages except @lib/ui (using Turbo)
 # - test-ui: UI component tests with Playwright for @lib/ui package (using Turbo)
+#            Uses reusable playwright-install action with browser caching (~30s faster on cache hits)
 # - build: Build all packages
 
 jobs:
@@ -89,8 +90,8 @@ jobs:
       - name: 📥 Monorepo install
         uses: ./.github/actions/pnpm-install
 
-      - name: Install Playwright browsers
-        run: pnpm --filter=@lib/ui exec playwright install --with-deps chromium
+      - name: 🎭 Install Playwright browsers
+        uses: ./.github/actions/playwright-install
 
       - name: Run UI tests
         run: pnpm turbo run test:run --filter=@lib/ui
