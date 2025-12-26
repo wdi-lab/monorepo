@@ -1,0 +1,27 @@
+{
+  "name": "@functions/auth",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "lint": "eslint \"**/*.ts*\"",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/aws-lambda": "catalog:",
+    "typescript": "catalog:",
+    "@config/tsconfig": "workspace:*",
+    "@config/eslint": "workspace:*",
+    "eslint": "catalog:"
+  }
+}

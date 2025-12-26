@@ -1,0 +1,27 @@
+{
+  "name": "@infra/auth",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "sst dev",
+    "deploy": "sst deploy",
+    "remove": "sst remove",
+    "console": "sst console",
+    "lint": "eslint \"**/*.ts*\"",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@functions/auth": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "aws-cdk-lib": "catalog:",
+    "@config/tsconfig": "workspace:*",
+    "@config/eslint": "workspace:*",
+    "constructs": "catalog:",
+    "sst": "catalog:",
+    "typescript": "catalog:",
+    "eslint": "catalog:"
+  }
+}
