@@ -11,9 +11,9 @@ type UserPoolProps = {
 };
 
 export class UserPool extends Construct {
-  userPool: cognito.UserPool;
   app: App;
   stack: Stack;
+  userPool!: cognito.UserPool;
 
   constructor(
     readonly scope: Construct,
@@ -52,6 +52,8 @@ export class UserPool extends Construct {
   }
 
   private createUserPoolClients() {
+    if (!this.props.clients) return;
+
     Object.entries(this.props.clients).forEach(([clientId, clientProps]) => {
       this.userPool.addClient(`UserPoolClient-${clientId}`, {
         userPoolClientName: clientId,
