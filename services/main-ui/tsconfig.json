@@ -1,5 +1,4 @@
 {
   "extends": "@config/tsconfig/sst.json",
-  "include": ["sst.config.ts", "infra/**/*.ts"],
-  "exclude": ["node_modules", "app"]
+  "include": ["infra", "sst.config.ts", "tsconfig.json", "eslint.config.js"]
 }

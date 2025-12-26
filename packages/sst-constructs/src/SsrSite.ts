@@ -325,7 +325,7 @@ export abstract class SsrSite extends Construct implements SSTConstruct {
             ...getBuildCmdEnvironment(environment),
           },
         });
-      } catch (e) {
+      } catch {
         throw new VisibleError(
           `There was a problem building the "${id}" site.`
         );
