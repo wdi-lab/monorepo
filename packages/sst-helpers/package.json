@@ -1,5 +1,5 @@
 {
-  "name": "@lib/sst-constructs",
+  "name": "@lib/sst-helpers",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -17,28 +17,25 @@
   "scripts": {
     "build": "tsup",
     "lint": "eslint \"**/*.ts*\"",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
-  "dependencies": {
-    "cross-spawn": "^7.0.6",
-    "esbuild": "^0.27.2",
-    "glob": "^13.0.0"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "@types/cross-spawn": "^6.0.6",
     "@types/node": "catalog:",
-    "aws-cdk-lib": "catalog:",
     "@config/eslint": "workspace:*",
     "@config/tsconfig": "workspace:*",
-    "constructs": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "aws-cdk-lib": "catalog:",
     "eslint": "catalog:",
     "sst": "catalog:",
     "tsup": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "aws-cdk-lib": "catalog:",
-    "constructs": "catalog:",
     "sst": "catalog:"
   }
 }

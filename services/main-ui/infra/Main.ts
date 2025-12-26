@@ -5,11 +5,7 @@ export function Main(context: StackContext) {
   const { stack } = context;
   const mainSite = new NitroSite(stack, 'MainSite', {
     path: './app',
-    ...('TURBO_HASH' in process.env
-      ? {
-          buildCommand: 'echo "Skipping build when turbo repo is detected"',
-        }
-      : {}),
+    buildCommand: 'pnpm build:app',
     dev: {
       deploy: false,
       url: 'http://localhost:3000',

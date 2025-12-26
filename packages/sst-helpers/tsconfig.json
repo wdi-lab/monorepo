@@ -1,0 +1,9 @@
+{
+  "extends": "@config/tsconfig/sst.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src/**/*", "tsconfig.json", "eslint.config.js"],
+  "exclude": ["node_modules", "dist"]
+}

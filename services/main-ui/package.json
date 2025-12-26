@@ -14,7 +14,8 @@
   "dependencies": {
     "@infra/main-api": "workspace:*",
     "@app/main-ui": "workspace:*",
-    "@lib/sst-constructs": "workspace:*"
+    "@lib/sst-constructs": "workspace:*",
+    "@lib/sst-helpers": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",

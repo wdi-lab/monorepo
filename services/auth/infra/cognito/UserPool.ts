@@ -1,7 +1,7 @@
-import * as cognito from 'aws-cdk-lib/aws-cognito';
-
 import { Construct } from 'constructs';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
 import { App, Stack } from 'sst/constructs';
+import { removalPolicy } from '@lib/sst-helpers';
 
 type UserPoolProps = {
   cdk?: {
@@ -47,6 +47,10 @@ export class UserPool extends Construct {
         email: true,
         ...this.props.cdk?.userPool?.signInAliases,
       },
+      removalPolicy: removalPolicy.retainForPermanentStage({
+        stack: this.stack,
+        app: this.app,
+      }),
       ...this.props.cdk?.userPool,
     });
   }

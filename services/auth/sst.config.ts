@@ -1,5 +1,6 @@
 import { SSTConfig } from 'sst';
 import { Main } from './infra/Main.ts';
+import { deploy } from '@lib/sst-helpers';
 
 const config: SSTConfig = {
   config(_input) {
@@ -9,6 +10,8 @@ const config: SSTConfig = {
     };
   },
   stacks(app) {
+    deploy.checkDeployment(app, { type: 'home-region-only' });
+
     app.stack(Main);
   },
 };

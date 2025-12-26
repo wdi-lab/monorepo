@@ -12,7 +12,7 @@ export default defineConfig({
     include: ['**/*.{test,spec}.{ts,tsx}'],
     coverage: {
       provider: 'v8',
-      reporter: [['lcov', { projectRoot: '../../' }]],
+      reporter: [['lcov', { projectRoot: '../../../' }], 'text'],
       exclude: [
         'node_modules/',
         'src/test/',

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { SsrSite, SsrSiteNormalizedProps, SsrSiteProps } from './SsrSite.js';
+import { SsrSite, SsrSiteNormalizedProps, SsrSiteProps } from './SsrSite.ts';
 import { SsrFunctionProps } from 'sst/constructs/SsrFunction.js';
 import { VisibleError } from 'sst/error.js';
 import { Construct } from 'constructs';

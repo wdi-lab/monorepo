@@ -12,7 +12,8 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@functions/main-api": "workspace:*"
+    "@functions/main-api": "workspace:*",
+    "@lib/sst-helpers": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",

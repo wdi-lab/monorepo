@@ -22,6 +22,7 @@ catalog:
   react-dom: ^19.2.3
   react-icons: ^5.5.0
   sst: 2.49.6
+  tsup: ^8.3.5
   typescript: ^5.9.3
   vite: ^7.1.7
   vitest: ^4.0.16

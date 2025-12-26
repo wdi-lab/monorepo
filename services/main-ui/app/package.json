@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build && tsc --noEmit",
+    "build:app": "vite build && tsc --noEmit",
     "preview": "vite preview",
     "start": "NODE_ENV=production node .output/server/index.mjs",
     "lint": "eslint src",
