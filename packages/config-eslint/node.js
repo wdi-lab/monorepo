@@ -42,6 +42,6 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['dist', 'node_modules', 'build', 'coverage', '.turbo'],
+    ignores: ['dist', 'node_modules', 'build', 'coverage', '.turbo', '.sst'],
   }
 );
