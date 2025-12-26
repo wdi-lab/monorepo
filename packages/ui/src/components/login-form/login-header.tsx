@@ -4,17 +4,9 @@ export interface LoginHeaderProps {
   logo?: React.ReactNode;
   title?: string;
   subtitle?: string;
-  showTitle?: boolean;
-  showSubtitle?: boolean;
 }
 
-export function LoginHeader({
-  logo,
-  title,
-  subtitle,
-  showTitle,
-  showSubtitle,
-}: LoginHeaderProps) {
+export function LoginHeader({ logo, title, subtitle }: LoginHeaderProps) {
   return (
     <>
       {logo && (
@@ -23,12 +15,12 @@ export function LoginHeader({
         </Box>
       )}
 
-      {showTitle && (
+      {title && (
         <VStack gap={2}>
           <Heading size="2xl" fontWeight="semibold" textAlign="center">
             {title}
           </Heading>
-          {showSubtitle && (
+          {subtitle && (
             <Text color="fg.muted" textAlign="center">
               {subtitle}
             </Text>

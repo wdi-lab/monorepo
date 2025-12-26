@@ -1,6 +1,7 @@
 export {
   LoginForm,
   type LoginFormProps,
+  type LoginFormHeading,
   type LoginMethod,
   type LoginMethodsResponse,
 } from './login-form';

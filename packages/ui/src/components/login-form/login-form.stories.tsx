@@ -15,11 +15,8 @@ const meta = {
     onSubmit: { action: 'submitted' },
     onForgotPassword: { action: 'forgot-password' },
     onSignUp: { action: 'sign-up' },
-    title: {
-      control: 'text',
-    },
-    subtitle: {
-      control: 'text',
+    heading: {
+      control: 'object',
     },
     emailLabel: {
       control: 'text',
@@ -37,12 +34,6 @@ const meta = {
       control: 'text',
     },
     isLoading: {
-      control: 'boolean',
-    },
-    showTitle: {
-      control: 'boolean',
-    },
-    showSubtitle: {
       control: 'boolean',
     },
     showRememberMe: {
@@ -107,28 +98,34 @@ export const WithMultipleProviders: Story = {
 
 export const WithLogo: Story = {
   args: {
-    logo: (
-      <Box
-        width="12"
-        height="12"
-        bg="teal.500"
-        borderRadius="md"
-        display="inline-flex"
-        alignItems="center"
-        justifyContent="center"
-        color="white"
-        fontWeight="bold"
-      >
-        Logo
-      </Box>
-    ),
+    heading: {
+      logo: (
+        <Box
+          width="12"
+          height="12"
+          bg="teal.500"
+          borderRadius="md"
+          display="inline-flex"
+          alignItems="center"
+          justifyContent="center"
+          color="white"
+          fontWeight="bold"
+        >
+          Logo
+        </Box>
+      ),
+      title: 'Welcome back',
+      subtitle: 'Sign in to your account to continue',
+    },
   },
 };
 
 export const CustomContent: Story = {
   args: {
-    title: 'Sign In',
-    subtitle: 'Access your account',
+    heading: {
+      title: 'Sign In',
+      subtitle: 'Access your account',
+    },
     submitButtonText: 'Continue',
   },
 };
@@ -148,7 +145,9 @@ export const WithErrors: Story = {
 
 export const MinimalWithoutOptionalFeatures: Story = {
   args: {
-    showSubtitle: false,
+    heading: {
+      title: 'Welcome back',
+    },
     showRememberMe: false,
     showForgotPassword: false,
     showSignUpLink: false,
@@ -157,8 +156,7 @@ export const MinimalWithoutOptionalFeatures: Story = {
 
 export const WithoutTitle: Story = {
   args: {
-    showTitle: false,
-    showSubtitle: false,
+    heading: {},
   },
 };
 

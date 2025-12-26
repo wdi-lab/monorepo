@@ -25,7 +25,7 @@ describe('LoginForm', () => {
       await user.click(continueButton);
 
       expect(
-        await screen.findByText('Email address is required')
+        await screen.findByText('Please enter your email address')
       ).toBeInTheDocument();
     });
 
@@ -52,14 +52,14 @@ describe('LoginForm', () => {
       await user.click(continueButton);
 
       expect(
-        await screen.findByText('Email address is required')
+        await screen.findByText('Please enter your email address')
       ).toBeInTheDocument();
 
       const emailInput = screen.getByLabelText(/email/i);
       await user.type(emailInput, 't');
 
       expect(
-        screen.queryByText('Email address is required')
+        screen.queryByText('Please enter your email address')
       ).not.toBeInTheDocument();
     });
 
@@ -227,7 +227,9 @@ describe('LoginForm', () => {
 
       // Should show error for empty methods
       expect(
-        await screen.findByText('No login methods available for this account')
+        await screen.findByText(
+          'This email is not registered. Please sign up first.'
+        )
       ).toBeInTheDocument();
     });
 
@@ -248,7 +250,7 @@ describe('LoginForm', () => {
       // Should show generic error message
       expect(
         await screen.findByText(
-          'Unable to verify email. Please try again later.'
+          'We could not verify your email. Please try again.'
         )
       ).toBeInTheDocument();
     });
@@ -277,7 +279,7 @@ describe('LoginForm', () => {
 
       // Should not show magic link button
       expect(
-        screen.queryByRole('button', { name: /email me a login link/i })
+        screen.queryByRole('button', { name: /send me a login link/i })
       ).not.toBeInTheDocument();
     });
 
@@ -300,7 +302,7 @@ describe('LoginForm', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByRole('button', { name: /email me a login link/i })
+          screen.getByRole('button', { name: /send me a login link/i })
         ).toBeInTheDocument();
       });
 
@@ -328,7 +330,7 @@ describe('LoginForm', () => {
       await waitFor(() => {
         expect(screen.getByLabelText('Password')).toBeInTheDocument();
         expect(
-          screen.getByRole('button', { name: /email me a login link/i })
+          screen.getByRole('button', { name: /send me a login link/i })
         ).toBeInTheDocument();
       });
     });
@@ -352,12 +354,12 @@ describe('LoginForm', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByRole('button', { name: /email me a login link/i })
+          screen.getByRole('button', { name: /send me a login link/i })
         ).toBeInTheDocument();
       });
 
       const magicLinkButton = screen.getByRole('button', {
-        name: /email me a login link/i,
+        name: /send me a login link/i,
       });
       await user.click(magicLinkButton);
 
@@ -379,7 +381,7 @@ describe('LoginForm', () => {
       await user.click(submitButton);
 
       expect(
-        await screen.findByText('Password is required')
+        await screen.findByText('Please enter your password')
       ).toBeInTheDocument();
       expect(onSubmit).not.toHaveBeenCalled();
     });
@@ -392,14 +394,14 @@ describe('LoginForm', () => {
       await user.click(submitButton);
 
       expect(
-        await screen.findByText('Password is required')
+        await screen.findByText('Please enter your password')
       ).toBeInTheDocument();
 
       const passwordInput = screen.getByLabelText('Password');
       await user.type(passwordInput, 'p');
 
       expect(
-        screen.queryByText('Password is required')
+        screen.queryByText('Please enter your password')
       ).not.toBeInTheDocument();
     });
 
@@ -505,17 +507,17 @@ describe('LoginForm', () => {
   });
 
   describe('Optional Features', () => {
-    it('should hide title when showTitle is false', () => {
-      renderLoginForm({ showTitle: false });
+    it('should hide title when heading.title is not provided', () => {
+      renderLoginForm({ heading: {} });
 
       expect(screen.queryByText('Welcome back')).not.toBeInTheDocument();
     });
 
-    it('should hide subtitle when showSubtitle is false', () => {
-      renderLoginForm({ showSubtitle: false });
+    it('should hide subtitle when heading.subtitle is not provided', () => {
+      renderLoginForm({ heading: { title: 'Welcome back' } });
 
       expect(
-        screen.queryByText('Start using Chakra in your projects')
+        screen.queryByText('Sign in to your account to continue')
       ).not.toBeInTheDocument();
     });
 
@@ -525,7 +527,7 @@ describe('LoginForm', () => {
         defaultEmail: 'user@example.com',
       });
 
-      expect(screen.queryByText('Remember me')).not.toBeInTheDocument();
+      expect(screen.queryByText('Keep me signed in')).not.toBeInTheDocument();
     });
 
     it('should hide forgot password when showForgotPassword is false', () => {
@@ -534,7 +536,7 @@ describe('LoginForm', () => {
         defaultEmail: 'user@example.com',
       });
 
-      expect(screen.queryByText('Forgot password')).not.toBeInTheDocument();
+      expect(screen.queryByText('Forgot password?')).not.toBeInTheDocument();
     });
 
     it('should hide sign up link when showSignUpLink is false', () => {
@@ -556,7 +558,7 @@ describe('LoginForm', () => {
         defaultEmail: 'user@example.com',
       });
 
-      const forgotPasswordLink = screen.getByText('Forgot password');
+      const forgotPasswordLink = screen.getByText('Forgot password?');
       await user.click(forgotPasswordLink);
 
       expect(onForgotPassword).toHaveBeenCalled();
@@ -568,7 +570,7 @@ describe('LoginForm', () => {
 
       renderLoginForm({ onSignUp });
 
-      const signUpLink = screen.getByText('Sign up');
+      const signUpLink = screen.getByText('Create account');
       await user.click(signUpLink);
 
       expect(onSignUp).toHaveBeenCalled();

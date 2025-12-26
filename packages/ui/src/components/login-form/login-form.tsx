@@ -12,6 +12,12 @@ export interface LoginMethodsResponse {
   error?: string;
 }
 
+export interface LoginFormHeading {
+  title?: string;
+  subtitle?: string;
+  logo?: React.ReactNode;
+}
+
 export interface LoginFormProps {
   onSubmit?: (email: string, password: string) => void;
   onMagicLinkRequest?: (email: string) => void;
@@ -20,8 +26,7 @@ export interface LoginFormProps {
   onValidateEmail?: (email: string) => string | undefined;
   onEmailVerified?: (email: string) => Promise<LoginMethodsResponse>;
   socialProviders?: SocialProvider[];
-  title?: string;
-  subtitle?: string;
+  heading?: LoginFormHeading;
   emailLabel?: string;
   emailPlaceholder?: string;
   passwordLabel?: string;
@@ -34,12 +39,9 @@ export interface LoginFormProps {
   magicLinkButtonText?: string;
   isLoading?: boolean;
   passwordError?: string;
-  showTitle?: boolean;
-  showSubtitle?: boolean;
   showRememberMe?: boolean;
   showForgotPassword?: boolean;
   showSignUpLink?: boolean;
-  logo?: React.ReactNode;
   defaultEmail?: string;
 }
 
@@ -51,8 +53,10 @@ export function LoginForm({
   onValidateEmail,
   onEmailVerified,
   socialProviders,
-  title = 'Welcome back',
-  subtitle = 'Sign in to your account to continue',
+  heading = {
+    title: 'Welcome back',
+    subtitle: 'Sign in to your account to continue',
+  },
   emailLabel = 'Email',
   emailPlaceholder = 'you@example.com',
   passwordLabel = 'Password',
@@ -65,12 +69,9 @@ export function LoginForm({
   magicLinkButtonText = 'Send me a login link',
   isLoading = false,
   passwordError,
-  showTitle = true,
-  showSubtitle = true,
   showRememberMe = true,
   showForgotPassword = true,
   showSignUpLink = true,
-  logo,
   defaultEmail,
 }: LoginFormProps) {
   const [step, setStep] = useState<'email' | 'password'>(
@@ -171,24 +172,25 @@ export function LoginForm({
     setStep('email');
   };
 
-  if (step === 'email') {
-    return (
-      <Box
-        as="form"
-        onSubmit={
-          handleEmailSubmit as unknown as React.FormEventHandler<HTMLDivElement>
-        }
-        width="full"
-      >
-        <VStack gap={8} align="stretch">
-          <LoginHeader
-            logo={logo}
-            title={title}
-            subtitle={subtitle}
-            showTitle={showTitle}
-            showSubtitle={showSubtitle}
-          />
+  const isEmailStep = step === 'email';
+  const formHandler = isEmailStep ? handleEmailSubmit : handlePasswordSubmit;
 
+  return (
+    <Box
+      as="form"
+      onSubmit={
+        formHandler as unknown as React.FormEventHandler<HTMLDivElement>
+      }
+      width="full"
+    >
+      <VStack gap={8} align="stretch">
+        <LoginHeader
+          logo={heading?.logo}
+          title={heading?.title}
+          subtitle={heading?.subtitle}
+        />
+
+        {isEmailStep ? (
           <LoginEmailStep
             email={email}
             emailError={currentEmailError}
@@ -203,46 +205,26 @@ export function LoginForm({
             signUpLinkText={signUpLinkText}
             onSignUp={onSignUp}
           />
-        </VStack>
-      </Box>
-    );
-  }
-
-  return (
-    <Box
-      as="form"
-      onSubmit={
-        handlePasswordSubmit as unknown as React.FormEventHandler<HTMLDivElement>
-      }
-      width="full"
-    >
-      <VStack gap={8} align="stretch">
-        <LoginHeader
-          logo={logo}
-          title={title}
-          subtitle={subtitle}
-          showTitle={showTitle}
-          showSubtitle={showSubtitle}
-        />
-
-        <LoginPasswordStep
-          email={email}
-          emailLabel={emailLabel}
-          passwordLabel={passwordLabel}
-          passwordError={currentPasswordError || passwordError}
-          submitButtonText={submitButtonText}
-          magicLinkButtonText={magicLinkButtonText}
-          rememberMeLabel={rememberMeLabel}
-          forgotPasswordText={forgotPasswordText}
-          showRememberMe={showRememberMe}
-          showForgotPassword={showForgotPassword}
-          availableMethods={availableMethods}
-          isLoading={isLoading}
-          onBack={handleBack}
-          onForgotPassword={onForgotPassword}
-          onMagicLinkRequest={handleMagicLinkRequest}
-          onPasswordChange={() => setCurrentPasswordError(undefined)}
-        />
+        ) : (
+          <LoginPasswordStep
+            email={email}
+            emailLabel={emailLabel}
+            passwordLabel={passwordLabel}
+            passwordError={currentPasswordError || passwordError}
+            submitButtonText={submitButtonText}
+            magicLinkButtonText={magicLinkButtonText}
+            rememberMeLabel={rememberMeLabel}
+            forgotPasswordText={forgotPasswordText}
+            showRememberMe={showRememberMe}
+            showForgotPassword={showForgotPassword}
+            availableMethods={availableMethods}
+            isLoading={isLoading}
+            onBack={handleBack}
+            onForgotPassword={onForgotPassword}
+            onMagicLinkRequest={handleMagicLinkRequest}
+            onPasswordChange={() => setCurrentPasswordError(undefined)}
+          />
+        )}
       </VStack>
     </Box>
   );
