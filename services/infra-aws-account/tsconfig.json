@@ -1,9 +1,0 @@
-{
-  "extends": "@config/tsconfig/node.json",
-  "compilerOptions": {
-    "outDir": "cdk.out",
-    "rootDir": "src"
-  },
-  "include": ["src/**/*", "tsconfig.json", "eslint.config.js"],
-  "exclude": ["node_modules", "cdk.out"]
-}

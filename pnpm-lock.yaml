@@ -326,40 +326,6 @@ importers:
         specifier: 'catalog:'
         version: 5.9.3
 
-  services/infra-aws-account:
-    dependencies:
-      '@lib/sst-helpers':
-        specifier: workspace:*
-        version: link:../../packages/sst-helpers
-      aws-cdk-lib:
-        specifier: 2.233.0
-        version: 2.233.0(constructs@10.3.0)
-      constructs:
-        specifier: 'catalog:'
-        version: 10.3.0
-    devDependencies:
-      '@config/eslint':
-        specifier: workspace:*
-        version: link:../../packages/config-eslint
-      '@config/tsconfig':
-        specifier: workspace:*
-        version: link:../../packages/config-tsconfig
-      '@types/node':
-        specifier: 'catalog:'
-        version: 22.19.3
-      aws-cdk:
-        specifier: ^2.1100.1
-        version: 2.1100.1
-      eslint:
-        specifier: 'catalog:'
-        version: 9.39.2(jiti@2.6.1)
-      tsx:
-        specifier: ^4.21.0
-        version: 4.21.0
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
-
   services/main-api:
     dependencies:
       '@functions/main-api':
@@ -3698,11 +3664,6 @@ packages:
       - table
       - yaml
       - mime-types
-
-  aws-cdk@2.1100.1:
-    resolution: {integrity: sha512-q2poFrQh90TK6eqeI0zznA8r1JkDI63WVOSqC7gFGo6qjQjAnvFk/utxHoNRgAC0RL0CLd19uCcHh3jfX9NiSg==}
-    engines: {node: '>= 18.0.0'}
-    hasBin: true
 
   aws-crt@1.28.1:
     resolution: {integrity: sha512-3cu6kLKYlJbCeYUWsuFpbEFWLt5pIoRYqcpRC9YU5QcUh2nKCKFOn9vi1eyOSC55Sp6xOMgLNhwaN1CIMH8rLg==}
@@ -12402,10 +12363,6 @@ snapshots:
       '@aws-cdk/asset-node-proxy-agent-v6': 2.1.0
       '@aws-cdk/cloud-assembly-schema': 48.20.0
       constructs: 10.4.4
-
-  aws-cdk@2.1100.1:
-    optionalDependencies:
-      fsevents: 2.3.2
 
   aws-crt@1.28.1:
     dependencies:

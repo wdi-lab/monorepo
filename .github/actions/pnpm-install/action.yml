@@ -43,7 +43,6 @@ runs:
     - uses: pnpm/action-setup@v4
       if: inputs.enable-corepack == 'false'
       with:
-        version: 10.26.2
         run_install: false
 
     - name: Expose pnpm config(s) through "$GITHUB_OUTPUT"
