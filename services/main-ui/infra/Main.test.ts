@@ -71,6 +71,9 @@ describe('Main UI Stack', () => {
         },
       })
     );
+    // Note: S3 bucket encryption is not explicitly configured by NitroSite construct.
+    // AWS S3 applies default encryption (SSE-S3) if not specified, but best practice
+    // is to explicitly configure encryption in IaC.
   });
 
   it('should create Lambda function with API Gateway for server-side rendering', async () => {

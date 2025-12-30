@@ -104,21 +104,31 @@ describe('UserPool construct', () => {
 
     // Group: Client creation and naming
     template.resourceCountIs('AWS::Cognito::UserPoolClient', 1);
-    template.hasResourceProperties('AWS::Cognito::UserPoolClient', {
-      ClientName: 'web',
-    });
+    template.hasResourceProperties(
+      'AWS::Cognito::UserPoolClient',
+      Match.objectLike({
+        ClientName: 'web',
+      })
+    );
 
     // Group: Default auth flows
-    template.hasResourceProperties('AWS::Cognito::UserPoolClient', {
-      ExplicitAuthFlows: ['ALLOW_CUSTOM_AUTH', 'ALLOW_REFRESH_TOKEN_AUTH'],
-    });
+    template.hasResourceProperties(
+      'AWS::Cognito::UserPoolClient',
+      Match.objectLike({
+        ExplicitAuthFlows: ['ALLOW_CUSTOM_AUTH', 'ALLOW_REFRESH_TOKEN_AUTH'],
+      })
+    );
 
-    // Group: Client linked to user pool
-    template.hasResourceProperties('AWS::Cognito::UserPoolClient', {
-      UserPoolId: Match.objectLike({
-        Ref: Match.stringLikeRegexp('testuserpool'),
-      }),
-    });
+    // Group: Client linked to user pool (verify cross-resource reference)
+    const userPoolLogicalId = Object.keys(
+      template.findResources('AWS::Cognito::UserPool')
+    )[0];
+    template.hasResourceProperties(
+      'AWS::Cognito::UserPoolClient',
+      Match.objectLike({
+        UserPoolId: { Ref: userPoolLogicalId },
+      })
+    );
   });
 
   it('should create multiple clients with custom configurations', async () => {

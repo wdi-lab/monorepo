@@ -1,5 +1,5 @@
 import { describe, it, beforeAll, vi } from 'vitest';
-import { Template } from 'aws-cdk-lib/assertions';
+import { Template, Match } from 'aws-cdk-lib/assertions';
 import { RemovalPolicy } from 'aws-cdk-lib';
 import { initProject } from 'sst/project.js';
 import { App, getStack } from 'sst/constructs';
@@ -27,10 +27,13 @@ describe('Main stack', () => {
 
     // Group: UserPool creation and client configuration
     template.resourceCountIs('AWS::Cognito::UserPool', 1);
-    template.hasResourceProperties('AWS::Cognito::UserPoolClient', {
-      ClientName: 'main',
-      GenerateSecret: true,
-    });
+    template.hasResourceProperties(
+      'AWS::Cognito::UserPoolClient',
+      Match.objectLike({
+        ClientName: 'main',
+        GenerateSecret: true,
+      })
+    );
 
     // Group: Stack outputs
     template.hasOutput('UserPoolId', {});
