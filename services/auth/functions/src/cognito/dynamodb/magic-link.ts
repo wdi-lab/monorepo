@@ -50,6 +50,21 @@ export interface MagicLinkRecord {
 }
 
 // ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Create SHA-256 hash of a value with salt.
+ *
+ * @param salt - Salt to prepend to the value
+ * @param value - Value to hash (string or Buffer)
+ * @returns SHA-256 hash as Buffer
+ */
+function createSaltedHash(salt: string, value: string | Buffer): Buffer {
+  return createHash('sha256').update(salt).update(value).digest();
+}
+
+// ============================================================================
 // DynamoDB Operations
 // ============================================================================
 
@@ -84,14 +99,8 @@ export async function storeMagicLink(params: {
   } = params;
 
   // Create hashes for storage
-  const userNameHash = createHash('sha256')
-    .update(salt)
-    .update(userName)
-    .digest();
-  const signatureHash = createHash('sha256')
-    .update(salt)
-    .update(signature)
-    .digest();
+  const userNameHash = createSaltedHash(salt, userName);
+  const signatureHash = createSaltedHash(salt, signature);
 
   try {
     await ddbDocClient.send(
@@ -142,14 +151,8 @@ export async function verifyAndConsumeMagicLink(params: {
   const { userName, signature, salt, tableName } = params;
 
   // Create hashes for lookup
-  const userNameHash = createHash('sha256')
-    .update(salt)
-    .update(userName)
-    .digest();
-  const signatureHash = createHash('sha256')
-    .update(salt)
-    .update(signature)
-    .digest();
+  const userNameHash = createSaltedHash(salt, userName);
+  const signatureHash = createSaltedHash(salt, signature);
 
   const uat = Math.floor(Date.now() / 1000);
 

@@ -46,7 +46,7 @@ describe('DynamoDB Magic Link Operations', () => {
   });
 
   it('should verify and consume a magic link', async () => {
-    const userName = 'verify@example.com';
+    const userName = `${randomUUID()}@example.com`;
     const signature = Buffer.from('verify-signature');
     const salt = 'test-salt';
     const iat = Math.floor(Date.now() / 1000);
@@ -79,7 +79,7 @@ describe('DynamoDB Magic Link Operations', () => {
   });
 
   it('should prevent reuse of consumed magic links', async () => {
-    const userName = 'oneuse@example.com';
+    const userName = `${randomUUID()}@example.com`;
     const signature = Buffer.from('oneuse-signature');
     const salt = 'test-salt';
 
@@ -116,7 +116,7 @@ describe('DynamoDB Magic Link Operations', () => {
 
   it('should return null for non-existent magic links', async () => {
     const result = await verifyAndConsumeMagicLink({
-      userName: 'nonexistent@example.com',
+      userName: `${randomUUID()}@example.com`,
       signature: Buffer.from('nonexistent'),
       salt: 'test-salt',
       tableName: TEST_TABLE_NAME,
