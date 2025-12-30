@@ -6,7 +6,38 @@ This guide provides patterns and best practices for writing **infrastructure tes
 
 **What are infrastructure tests?** Tests that verify your AWS resources are configured correctly to support your application features. They test the CloudFormation template, not application behavior.
 
-**Scope of this document:** This guide focuses exclusively on infrastructure/stack tests. For testing application logic (unit tests), API endpoints (integration tests), or user workflows (E2E tests), use different testing approaches.
+**Scope:** This guide focuses exclusively on infrastructure/stack tests. For testing application logic (unit tests), API endpoints (integration tests), or user workflows (E2E tests), use different testing approaches.
+
+## What to Test
+
+### Testing Priorities
+
+Focus on critical infrastructure properties that support your application features:
+
+| Priority                       | Category                      | Examples                                                            |
+| ------------------------------ | ----------------------------- | ------------------------------------------------------------------- |
+| **1. Resource Existence**      | Required resources exist      | Lambda, SQS, DynamoDB, API Gateway                                  |
+| **2. Resource Wiring**         | Resources connected correctly | Lambda → SQS, API Gateway → Lambda, Event source mappings           |
+| **3. Security & IAM**          | Security settings in place    | Encryption, IAM permissions, public access blocking                 |
+| **4. Environment Config**      | Configuration correct         | Environment variables, resource references, stage-specific settings |
+| **5. Infrastructure Policies** | Organizational standards      | Retention policies, backups, tagging                                |
+
+### What Infrastructure Tests Verify
+
+- ✅ Required resources exist (Lambda, SQS, DynamoDB, API Gateway, etc.)
+- ✅ Resources are configured correctly (runtime, memory, timeout, etc.)
+- ✅ Resources are wired together (Lambda → SQS, API Gateway → Lambda)
+- ✅ Security settings are in place (encryption, IAM permissions, public access blocking)
+- ✅ Cross-resource references are correct (Lambda env vars reference DynamoDB table name)
+
+### What Infrastructure Tests Do NOT Verify
+
+- ❌ API endpoint behavior (use integration tests)
+- ❌ Business logic correctness (use unit tests)
+- ❌ End-to-end user workflows (use E2E tests)
+- ❌ CDK implementation details or every CDK-generated property
+
+**Example:** For a feature that sends signup emails, infrastructure tests verify the SQS queue exists, Lambda is connected to it, Lambda has SES permissions, and environment variables are configured—not whether emails actually arrive in inboxes.
 
 ## Testing Philosophy
 
@@ -14,52 +45,18 @@ This guide provides patterns and best practices for writing **infrastructure tes
 
 **Write fewer, better tests that are easier to maintain.** Each test synthesizes the entire CloudFormation stack (~1-2s each), making performance critical. Group related assertions together to minimize stack syntheses.
 
-**Target:** Aim for 3-6 well-organized tests per stack instead of 10+ micro-tests.
-
-**Performance impact:** Grouping assertions can reduce test time by 50-70% (e.g., 15 tests taking 12s → 4 tests taking 4s).
+- **Target:** 3-6 well-organized tests per stack instead of 10+ micro-tests
+- **Performance impact:** Grouping assertions can reduce test time by 50-70%
 
 ### Key Principles
 
-1. **Group related assertions to minimize stack syntheses**
-   - Test multiple properties of the same resource in one test
-   - Group related resources (CloudFront + S3, Lambda + API Gateway)
-   - Group by concern (all security settings, all IAM policies)
-   - Target: 3-6 grouped tests per stack
+1. **Group related assertions** - Test multiple properties of the same resource in one test. Target: 3-6 grouped tests per stack.
 
-2. **Test CloudFormation output, not implementation**
-   - Validate deployed resources and their configuration
-   - Tests should survive refactoring if deployed resources remain the same
+2. **Test CloudFormation output, not implementation** - Validate deployed resources; tests should survive refactoring if deployed resources remain the same.
 
-3. **Focus on critical infrastructure properties**
-   - Security (encryption, IAM, public access)
-   - Resource wiring (Lambda → SQS, API → Lambda)
-   - Required configuration (environment variables, IAM permissions)
-   - Cross-resource references and stack dependencies
+3. **Focus on critical properties** - Security (encryption, IAM, public access), resource wiring, required configuration, cross-resource references.
 
-4. **Write resilient tests**
-   - Use flexible matchers (`Match.objectLike()`) to avoid CDK brittleness
-   - Mock account-specific helpers to avoid environment dependencies
-   - Ensure tests can run independently
-
-### What Are Infrastructure Tests?
-
-Infrastructure tests validate that your AWS resources are **configured correctly to support your application features**. They test the CloudFormation template generated by your CDK/SST code, not application behavior.
-
-**Infrastructure tests verify:**
-
-- Required resources exist (Lambda, SQS, DynamoDB, API Gateway, etc.)
-- Resources are configured correctly (runtime, memory, timeout, etc.)
-- Resources are wired together (Lambda → SQS, API Gateway → Lambda)
-- Security settings are in place (encryption, IAM permissions, public access blocking)
-- Cross-resource references are correct (Lambda env vars reference DynamoDB table name)
-
-**What infrastructure tests do NOT verify:**
-
-- ❌ API endpoint behavior (use integration tests)
-- ❌ Business logic correctness (use unit tests)
-- ❌ End-to-end user workflows (use E2E tests)
-
-**Example:** For a feature that sends signup emails, infrastructure tests verify the SQS queue exists, Lambda is connected to it, Lambda has SES permissions, and environment variables are configured—not whether emails actually arrive in inboxes.
+4. **Write resilient tests** - Use flexible matchers (`Match.objectLike()`), mock account-specific helpers, ensure tests run independently.
 
 ## Project Structure
 
@@ -74,7 +71,7 @@ services/my-service/
 └── tsconfig.json
 ```
 
-## SST Test Pattern
+## Quick Start: SST Test Pattern
 
 ### Basic Test Structure
 
@@ -103,7 +100,7 @@ describe('MyConstruct', () => {
     // Create SST app in deploy mode
     const app = new App({ mode: 'deploy' });
 
-    // Define stack function (MUST be named const for getStack to work)
+    // Define stack function (MUST be named function for getStack to work)
     const Stack = function (ctx: StackContext) {
       new MyConstruct(ctx.stack, 'test-construct');
     };
@@ -132,899 +129,33 @@ describe('MyConstruct', () => {
 });
 ```
 
-### Critical Patterns
+### Critical Requirements
 
-1. **Call `initProject({})` once in `beforeAll()`**
-   - Initializes SST's internal state
-   - Exception: Call per-test if tests need different stage values or SST config
+| Requirement            | Correct                                   | Wrong                                    |
+| ---------------------- | ----------------------------------------- | ---------------------------------------- |
+| **Stack function**     | `const Stack = function (ctx) {}`         | `const Stack = (ctx) => {}`              |
+| **SST initialization** | `beforeAll(() => initProject({}))`        | Missing `initProject`                    |
+| **App mode**           | `new App({ mode: 'deploy' })`             | `new App()`                              |
+| **Synthesis**          | `await app.finish()` before assertions    | Missing `app.finish()`                   |
+| **Mocking**            | Mock `@lib/sst-helpers`                   | Direct import causing account validation |
+| **Parallelism**        | `fileParallelism: false` in vitest.config | Parallel execution (SST state conflicts) |
 
-2. **Use named function expression for stacks**
-   - Required: `const Stack = function (ctx: StackContext) { ... }`
-   - Won't work: `const Stack = (ctx: StackContext) => { ... }`
+### Per-Test initProject() (When Needed)
 
-3. **Always use `App({ mode: 'deploy' })` and `await app.finish()`**
-   - Deploy mode ensures proper CloudFormation synthesis
-   - `app.finish()` must complete before accessing template
-
-4. **Mock `@lib/sst-helpers` for account-specific logic**
-   - SST test mode uses placeholder account IDs
-   - Mock functions that validate AWS accounts or stages
-
-### Advanced: Per-Test initProject()
-
-When tests need different `initProject()` configuration, call it per test instead of in `beforeAll()`:
+Use per-test `initProject()` when tests need different SST configuration:
 
 ```typescript
 describe('MyConstruct with different configs', () => {
-  it('should work with custom stage in initProject', async () => {
-    // Initialize with custom params for this test
-    await initProject({
-      stage: 'custom-stage',
-    });
-
-    const app = new App({ mode: 'deploy' });
-    const Stack = function (ctx: StackContext) {
-      // ctx.stage will be 'custom-stage'
-      new MyConstruct(ctx.stack, 'test');
-    };
-    app.stack(Stack);
-    await app.finish();
-
-    const template = Template.fromStack(getStack(Stack));
-    // Assertions...
+  it('should work with production stage', async () => {
+    await initProject({ stage: 'production' });
+    // ... test code
   });
 
-  it('should work with different config', async () => {
-    // Initialize with different params
-    await initProject({
-      stage: 'another-stage',
-    });
-
-    const app = new App({ mode: 'deploy' });
-    const Stack = function (ctx: StackContext) {
-      // ctx.stage will be 'another-stage'
-      new MyConstruct(ctx.stack, 'test');
-    };
-    app.stack(Stack);
-    await app.finish();
-
-    const template = Template.fromStack(getStack(Stack));
-    // Assertions...
+  it('should work with development stage', async () => {
+    await initProject({ stage: 'development' });
+    // ... test code
   });
 });
-```
-
-**When to use per-test `initProject()`:**
-
-- Tests need different stage values
-- Tests need different SST configuration
-- Tests need to validate stage-dependent behavior
-
-**When to use `beforeAll()` `initProject()`:**
-
-- All tests use the same SST configuration (most common)
-- Faster test execution (initialization happens once)
-
-## AWS CDK Assertions
-
-### Import Assertions
-
-```typescript
-import { Template, Match, Capture } from 'aws-cdk-lib/assertions';
-```
-
-### Resource Counting
-
-```typescript
-// Exact count
-template.resourceCountIs('AWS::Lambda::Function', 1);
-
-// At least one
-template.resourceCountIs('AWS::S3::Bucket', Match.anyValue());
-```
-
-### Property Assertions
-
-**Always use flexible matching with `Match.objectLike()`** to avoid test brittleness when CDK updates add new properties.
-
-**❌ Exact matching (brittle):**
-template.hasResourceProperties('AWS::S3::Bucket', {
-BucketName: 'my-bucket',
-BucketEncryption: {
-/_ ... _/
-},
-VersioningConfiguration: {
-/_ ... _/
-},
-// If CDK adds a new property, this test fails
-});
-
-`````
-
-#### Flexible Matching (Recommended)
-
-```typescript
-template.hasResourceProperties(
-  'AWS::S3::Bucket',
-  Match.objectLike({
-    BucketEncryption: {
-      ServerSideEncryptionConfiguration: [
-        {
-          ServerSideEncryptionByDefault: {
-            SSEAlgorithm: 'AES256',
-          },
-        },
-      ],
-    },
-  })
-);
-```
-
-### Match Utilities
-
-```typescript
-// Object with specific properties (ignores others)
-Match.objectLike({
-  Property: 'value',
-});
-
-// Array containing specific items (ignores others)
-Match.arrayWith([Match.objectLike({ Key: 'Environment', Value: 'test' })]);
-
-// String pattern matching
-Match.stringLikeRegexp('arn:aws:s3:::my-bucket-.*');
-
-// Any value (for counting or existence checks)
-Match.anyValue();
-
-// Absent property
-Match.absent();
-```
-
-### Testing Resource References
-
-CloudFormation uses `{ "Ref": "LogicalResourceId" }` for references:
-
-```typescript
-// Get all Lambda functions
-const functions = template.findResources('AWS::Lambda::Function');
-const functionLogicalId = Object.keys(functions)[0];
-
-// Verify API Gateway references the function
-template.hasResourceProperties(
-  'AWS::ApiGateway::Method',
-  Match.objectLike({
-    Integration: Match.objectLike({
-      Uri: Match.objectLike({
-        'Fn::Join': Match.arrayWith([
-          Match.arrayWith([
-            Match.objectLike({
-              'Fn::GetAtt': [functionLogicalId, 'Arn'],
-            }),
-          ]),
-        ]),
-      }),
-    }),
-  })
-);
-```
-
-### Advanced: Capturing Values
-
-```typescript
-import { Capture } from 'aws-cdk-lib/assertions';
-
-const roleCapture = new Capture();
-template.hasResourceProperties('AWS::Lambda::Function', {
-  Role: roleCapture,
-});
-
-// Use captured value in another assertion
-const roleLogicalId = roleCapture.asObject()['Fn::GetAtt'][0];
-template.hasResourceProperties('AWS::IAM::Role', {
-  // ...
-});
-```
-
-## Common Test Scenarios
-
-### 1. Grouped Testing Pattern (Recommended)
-
-**Real-world example** from `services/main-ui/infra/Main.test.ts` showing optimal grouping:
-
-```typescript
-describe('Main UI Stack', () => {
-  beforeAll(async () => {
-    await initProject({});
-  });
-
-  // Test 1: Groups CloudFront + S3 + security (related infrastructure)
-  it('should create CloudFront distribution with S3 bucket and security configuration', async () => {
-    const app = new App({ mode: 'deploy' });
-    app.stack(Main);
-    await app.finish();
-    const template = Template.fromStack(getStack(Main));
-
-    // Group: CloudFront distribution with HTTPS redirect and cache behaviors
-    template.resourceCountIs('AWS::CloudFront::Distribution', 1);
-    template.hasResourceProperties(
-      'AWS::CloudFront::Distribution',
-      Match.objectLike({
-        DistributionConfig: Match.objectLike({
-          Enabled: true,
-          Origins: Match.arrayWith([Match.objectLike({ DomainName: Match.anyValue() })]),
-          DefaultCacheBehavior: Match.objectLike({
-            ViewerProtocolPolicy: Match.stringLikeRegexp('redirect-to-https|https-only'),
-            Compress: true,
-          }),
-        }),
-      })
-    );
-
-    // Group: S3 bucket with security best practices
-    template.resourceCountIs('AWS::S3::Bucket', 1);
-    template.hasResourceProperties(
-      'AWS::S3::Bucket',
-      Match.objectLike({
-        PublicAccessBlockConfiguration: {
-          BlockPublicAcls: true,
-          BlockPublicPolicy: true,
-          IgnorePublicAcls: true,
-          RestrictPublicBuckets: true,
-        },
-      })
-    );
-  });
-
-  // Test 2: Groups Lambda + API Gateway (related integration)
-  it('should create Lambda function with API Gateway for server-side rendering', async () => {
-    const app = new App({ mode: 'deploy' });
-    app.stack(Main);
-    await app.finish();
-    const template = Template.fromStack(getStack(Main));
-
-    // Group: Lambda configuration
-    template.hasResourceProperties(
-      'AWS::Lambda::Function',
-      Match.objectLike({
-        Runtime: Match.stringLikeRegexp('nodejs'),
-        Handler: Match.stringLikeRegexp('index.handler'),
-      })
-    );
-
-    // Group: API Gateway integration
-    template.resourceCountIs('AWS::ApiGateway::RestApi', 1);
-    template.hasResourceProperties(
-      'AWS::ApiGateway::Method',
-      Match.objectLike({ HttpMethod: 'ANY' })
-    );
-  });
-
-  // Test 3: Groups ALL IAM permissions together
-  it('should configure IAM permissions for S3 and CloudFront invalidation', async () => {
-    const app = new App({ mode: 'deploy' });
-    app.stack(Main);
-    await app.finish();
-    const template = Template.fromStack(getStack(Main));
-
-    // Group: IAM role + S3 permissions + CloudFront invalidation
-    template.hasResourceProperties('AWS::IAM::Role', Match.objectLike({ ... }));
-    template.hasResourceProperties('AWS::IAM::Policy', Match.objectLike({ /* S3 */ }));
-    template.hasResourceProperties('AWS::IAM::Policy', Match.objectLike({ /* CloudFront */ }));
-  });
-
-  // Test 4: Stack outputs
-  it('should export MainSiteUrl as stack output', async () => {
-    const app = new App({ mode: 'deploy' });
-    app.stack(Main);
-    await app.finish();
-    const template = Template.fromStack(getStack(Main));
-
-    template.hasOutput('MainSiteUrl', {});
-  });
-});
-```
-
-**Performance comparison:**
-
-| Approach                          | Tests         | Duration        | Stack Syntheses |
-| --------------------------------- | ------------- | --------------- | --------------- |
-| ❌ Micro-tests (8 separate tests) | 8             | ~14-18s         | 8               |
-| ✅ Grouped tests (optimized)      | 4             | ~4-7s           | 4               |
-| **Improvement**                   | **50% fewer** | **~60% faster** | **50% fewer**   |
-
-**Key benefits of this approach:**
-
-- 4 focused tests instead of 8+ micro-tests
-- Each test validates a logical grouping (CloudFront+S3, Lambda+API, all IAM, outputs)
-- Multiple assertions per test when testing related resources
-- Easier to maintain and understand intent
-- **Significantly faster execution** (60% speed improvement)
-- Fewer stack syntheses = less memory usage
-
-**Additional real-world examples:**
-
-**Example 2: Cognito UserPool** (`services/auth/infra/cognito/UserPool.test.ts`)
-
-Optimized from 15 separate tests to 4 grouped tests:
-
-| Approach                     | Tests         | Duration        | Stack Syntheses |
-| ---------------------------- | ------------- | --------------- | --------------- |
-| ❌ Micro-tests (15 separate) | 15            | ~8-12s          | 15              |
-| ✅ Grouped tests (optimized) | 4             | ~3-4s           | 4               |
-| **Improvement**              | **73% fewer** | **~70% faster** | **73% fewer**   |
-
-```typescript
-describe('UserPool construct', () => {
-  // Test 1: Groups default configuration + password policy + sign-in aliases + no clients
-  it('should create UserPool with default configuration and custom id', async () => {
-    const app = new App({ mode: 'deploy' });
-    let userPoolId;
-    const Stack = function (ctx: StackContext) {
-      const userPool = new UserPool(ctx.stack, 'custom-id');
-      userPoolId = userPool.id;
-    };
-    app.stack(Stack);
-    await app.finish();
-    const template = Template.fromStack(getStack(Stack));
-
-    // Group: UserPool creation + id + default password policy + sign-in aliases + no clients
-    template.resourceCountIs('AWS::Cognito::UserPool', 1);
-    expect(userPoolId).toBe('custom-id');
-    template.hasResourceProperties('AWS::Cognito::UserPool', {
-      Policies: Match.objectLike({
-        PasswordPolicy: Match.objectLike({
-          MinimumLength: 8,
-          RequireNumbers: true,
-          RequireUppercase: true,
-          RequireLowercase: true,
-          RequireSymbols: true,
-        }),
-      }),
-      AliasAttributes: Match.arrayWith(['email', 'phone_number']),
-    });
-    template.resourceCountIs('AWS::Cognito::UserPoolClient', 0);
-  });
-
-  // Test 2: Custom password policy (focused on override behavior)
-  it('should override password policy with custom props', async () => {
-    // ... validates custom configuration
-  });
-
-  // Test 3: Groups single client + auth flows + pool reference
-  it('should create single client with default config and auth flows', async () => {
-    // ... validates client creation and configuration
-  });
-
-  // Test 4: Groups multiple clients + generateSecret configuration
-  it('should create multiple clients with custom configurations', async () => {
-    // ... validates multiple client scenario
-  });
-});
-```
-
-**Example 3: Auth Main Stack** (`services/auth/infra/Main.test.ts`)
-
-Optimized from 3 nested describe blocks to 1 comprehensive test:
-
-```typescript
-describe('Main stack', () => {
-  // Single test groups UserPool creation + client config + stack outputs
-  it('should create UserPool with client configuration and stack outputs', async () => {
-    const app = new App({ mode: 'deploy' });
-    app.stack(Main);
-    await app.finish();
-    const template = Template.fromStack(getStack(Main));
-
-    // Group: UserPool + client + outputs together (all related to Main stack)
-    template.resourceCountIs('AWS::Cognito::UserPool', 1);
-    template.hasResourceProperties('AWS::Cognito::UserPoolClient', {
-      ClientName: 'main',
-      GenerateSecret: true,
-    });
-    template.hasOutput('UserPoolId', {});
-  });
-});
-```
-
-**Grouping strategy:**
-
-1. **By relationship**: CloudFront + S3 (CDN with storage), Lambda + API Gateway (compute with access)
-2. **By concern**: All IAM policies together, all security settings together
-3. **By scenario**: Default config in one test, custom overrides in another
-4. **Keep simple**: Stack outputs, conditional resource counts
-
-**Compare with micro-test anti-pattern:**
-
-```typescript
-// ❌ BAD - Too fragmented (8 tests, 14-18s runtime)
-it('should create CloudFront distribution', async () => {}); // 1 synthesis
-it('should configure HTTPS redirect', async () => {}); // 1 synthesis
-it('should create S3 bucket', async () => {}); // 1 synthesis
-it('should block public access', async () => {}); // 1 synthesis
-it('should create Lambda function', async () => {}); // 1 synthesis
-it('should create API Gateway', async () => {}); // 1 synthesis
-it('should configure S3 IAM permissions', async () => {}); // 1 synthesis
-it('should configure CloudFront invalidation', async () => {}); // 1 synthesis
-// = 8 separate stack syntheses, very slow!
-```
-
-This anti-pattern creates maintenance burden AND performance issues. Each test synthesizes the entire stack, making tests unnecessarily slow.
-
-### 2. Testing S3 Bucket with Grouped Security Properties
-
-```typescript
-it('should enforce S3 security best practices', async () => {
-  const app = new App({ mode: 'deploy' });
-  const Stack = function (ctx: StackContext) {
-    new MyBucket(ctx.stack, 'test');
-  };
-  app.stack(Stack);
-  await app.finish();
-
-  const template = Template.fromStack(getStack(Stack));
-
-  // Group: resource count + security properties + versioning in one test
-  template.resourceCountIs('AWS::S3::Bucket', 1);
-  template.hasResourceProperties(
-    'AWS::S3::Bucket',
-    Match.objectLike({
-      BucketEncryption: Match.objectLike({
-        ServerSideEncryptionConfiguration: Match.arrayWith([
-          Match.objectLike({
-            ServerSideEncryptionByDefault: {
-              SSEAlgorithm: 'AES256',
-            },
-          }),
-        ]),
-      }),
-      PublicAccessBlockConfiguration: {
-        BlockPublicAcls: true,
-        BlockPublicPolicy: true,
-        IgnorePublicAcls: true,
-        RestrictPublicBuckets: true,
-      },
-      VersioningConfiguration: {
-        Status: 'Enabled',
-      },
-    })
-  );
-});
-```
-
-### 3. Testing Custom Configuration with Multiple Properties
-
-```typescript
-it('should accept custom configuration overrides', async () => {
-  const app = new App({ mode: 'deploy' });
-  const Stack = function (ctx: StackContext) {
-    new MyConstruct(ctx.stack, 'test', {
-      bucketName: 'custom-bucket-name',
-      versioning: false,
-      lifecycleRules: [{ expirationInDays: 30 }],
-    });
-  };
-  app.stack(Stack);
-  await app.finish();
-
-  const template = Template.fromStack(getStack(Stack));
-
-  // Group: custom name + versioning + lifecycle in one test
-  template.hasResourceProperties(
-    'AWS::S3::Bucket',
-    Match.objectLike({
-      BucketName: 'custom-bucket-name',
-      VersioningConfiguration: Match.objectLike({
-        Status: 'Suspended',
-      }),
-      LifecycleConfiguration: Match.objectLike({
-        Rules: Match.arrayWith([
-          Match.objectLike({
-            ExpirationInDays: 30,
-          }),
-        ]),
-      }),
-    })
-  );
-});
-```
-
-### 4. Testing Multiple Resources with Configuration
-
-```typescript
-it('should create multiple clients with OAuth configuration', async () => {
-  const app = new App({ mode: 'deploy' });
-  const Stack = function (ctx: StackContext) {
-    new UserPool(ctx.stack, 'test', {
-      clients: [
-        { clientName: 'web-client', allowedOAuthFlows: ['code'] },
-        { clientName: 'mobile-client', allowedOAuthFlows: ['implicit'] },
-      ],
-    });
-  };
-  app.stack(Stack);
-  await app.finish();
-
-  const template = Template.fromStack(getStack(Stack));
-
-  // Group: resource count + properties for each client
-  template.resourceCountIs('AWS::Cognito::UserPoolClient', 2);
-
-  template.hasResourceProperties(
-    'AWS::Cognito::UserPoolClient',
-    Match.objectLike({
-      ClientName: 'web-client',
-      AllowedOAuthFlows: ['code'],
-    })
-  );
-
-  template.hasResourceProperties(
-    'AWS::Cognito::UserPoolClient',
-    Match.objectLike({
-      ClientName: 'mobile-client',
-      AllowedOAuthFlows: ['implicit'],
-    })
-  );
-});
-```
-
-**Tip:** When testing resources with multiple instances, consider setting the `description` property (if available) to make assertions easier and more explicit:
-
-```typescript
-it('should create functions with correct configurations', async () => {
-  const app = new App({ mode: 'deploy' });
-  const Stack = function (ctx: StackContext) {
-    new Function(ctx.stack, 'api-handler', {
-      handler: 'api.handler',
-      runtime: 'nodejs20.x',
-      memorySize: 512,
-      description: 'API request handler', // Helpful for testing
-    });
-    new Function(ctx.stack, 'worker', {
-      handler: 'worker.handler',
-      runtime: 'nodejs20.x',
-      memorySize: 1024,
-      description: 'Background worker', // Helpful for testing
-    });
-  };
-  app.stack(Stack);
-  await app.finish();
-
-  const template = Template.fromStack(getStack(Stack));
-
-  template.resourceCountIs('AWS::Lambda::Function', 2);
-
-  // Group: description + handler + runtime + memory for each function
-  template.hasResourceProperties(
-    'AWS::Lambda::Function',
-    Match.objectLike({
-      Description: 'API request handler',
-      Handler: 'api.handler',
-      Runtime: 'nodejs20.x',
-      MemorySize: 512,
-    })
-  );
-
-  template.hasResourceProperties(
-    'AWS::Lambda::Function',
-    Match.objectLike({
-      Description: 'Background worker',
-      Handler: 'worker.handler',
-      Runtime: 'nodejs20.x',
-      MemorySize: 1024,
-    })
-  );
-});
-```
-
-This pattern works for any AWS resource that supports the `description` property. Check the AWS IAC MCP documentation tools to verify if a specific resource type supports it.
-
-### 5. Testing Conditional Resources
-
-```typescript
-it('should handle optional resources based on configuration', async () => {
-  const app = new App({ mode: 'deploy' });
-  const Stack = function (ctx: StackContext) {
-    new UserPool(ctx.stack, 'test', {
-      // No clients provided
-      enableDomain: false,
-    });
-  };
-  app.stack(Stack);
-  await app.finish();
-
-  const template = Template.fromStack(getStack(Stack));
-
-  // Group: multiple conditional resource checks together
-  template.resourceCountIs('AWS::Cognito::UserPool', 1);
-  template.resourceCountIs('AWS::Cognito::UserPoolClient', 0);
-  template.resourceCountIs('AWS::Cognito::UserPoolDomain', 0);
-});
-```
-
-### 6. Testing Cross-Resource References and Integration
-
-```typescript
-it('should wire up Lambda, API Gateway, and IAM correctly', async () => {
-  const app = new App({ mode: 'deploy' });
-  const Stack = function (ctx: StackContext) {
-    new ApiWithLambda(ctx.stack, 'test');
-  };
-  app.stack(Stack);
-  await app.finish();
-
-  const template = Template.fromStack(getStack(Stack));
-
-  // Get Lambda function logical ID for reference checks
-  const functions = template.findResources('AWS::Lambda::Function');
-  const functionLogicalId = Object.keys(functions)[0];
-
-  // Group: API Gateway integration + IAM permissions + environment refs
-  template.hasResourceProperties(
-    'AWS::ApiGateway::Method',
-    Match.objectLike({
-      Integration: Match.objectLike({
-        Uri: Match.objectLike({
-          'Fn::Join': Match.arrayWith([
-            Match.arrayWith([
-              Match.objectLike({
-                'Fn::GetAtt': [functionLogicalId, 'Arn'],
-              }),
-            ]),
-          ]),
-        }),
-      }),
-    })
-  );
-
-  // Verify Lambda has environment variables with resource references
-  template.hasResourceProperties(
-    'AWS::Lambda::Function',
-    Match.objectLike({
-      Environment: Match.objectLike({
-        Variables: Match.objectLike({
-          USER_POOL_ARN: Match.anyValue(),
-          TABLE_NAME: Match.anyValue(),
-        }),
-      }),
-    })
-  );
-});
-```
-
-### 7. Testing Stage-Dependent Configuration
-
-````typescript
-it('should apply production settings for permanent stages', async () => {
-  await initProject({ stage: 'production' });
-
-  const app = new App({ mode: 'deploy' });
-  const Stack = function (ctx: StackContext) {
-    new MyConstruct(ctx.stack, 'test');
-  };
-  app.stack(Stack);
-  await app.finish();
-
-  const template = Template.fromStack(getStack(Stack));
-
-  // Group: removal policy + backup + point-in-time recovery
-  template.hasResourceProperties(
-    'AWS::DynamoDB::Table',
-    Match.objectLike({
-      DeletionPolicy: 'Retain',
-      PointInTimeRecoverySpecification: {
-        PointInTimeRecoveryEnabled: true,
-      },
-    })
-  );
-
-  template.hasResourceProperties(
-    'AWS::S3::Bucket',
-    Match.objectLike({
-      DeletionPolicy: 'Retain',
-      VersioningConfiguration: {
-        Status: 'Enabled',
-      },
-    })
-  );
-});
-
-## Understanding CloudFormation Resources
-
-### Using AWS IAC MCP Tools
-
-When writing assertions, use AWS IAC MCP tools to understand CloudFormation resource schemas:
-
-```typescript
-// Use search_cloudformation_documentation tool
-// Query: "AWS::Cognito::UserPool properties"
-
-// Returns official AWS CloudFormation property documentation
-// Use this to understand:
-// - Property names (case-sensitive!)
-// - Property types (string, number, object, array)
-// - Nested property structures
-// - Required vs optional properties
-`````
-
-### Common CloudFormation Property Patterns
-
-1. **Property Names are PascalCase in CloudFormation:**
-
-   ```typescript
-   // CDK Input (camelCase)
-   new Bucket(stack, 'Bucket', {
-     bucketName: 'my-bucket',
-     encryption: BucketEncryption.S3_MANAGED,
-   });
-
-   // CloudFormation Output (PascalCase)
-   {
-     BucketName: 'my-bucket',
-     BucketEncryption: { /* ... */ }
-   }
-   ```
-
-2. **References use special CloudFormation functions:**
-
-   ```typescript
-   // Direct reference
-   { "Ref": "LogicalResourceId" }
-
-   // Get attribute
-   { "Fn::GetAtt": ["LogicalResourceId", "Arn"] }
-
-   // Join strings
-   { "Fn::Join": ["", ["prefix-", { "Ref": "ResourceId" }]] }
-   ```
-
-3. **Boolean values:**
-
-   ```typescript
-   // Some use boolean
-   BlockPublicAcls: true;
-
-   // Some use string
-   Status: 'Enabled'; // not true/false
-   ```
-
-## Snapshot Testing
-
-### What Are Snapshot Tests?
-
-Snapshot tests compare the entire synthesized CloudFormation template against a previously stored baseline template. They're useful for refactoring but have limitations.
-
-### When to Use Snapshot Tests
-
-**✅ Good use cases:**
-
-- Refactoring construct implementations while keeping outputs the same
-- Ensuring changes to shared constructs don't unexpectedly affect other stacks
-- Quick smoke tests during development
-
-**❌ Not ideal for:**
-
-- Primary regression testing (too broad, fails on CDK updates)
-- Catching specific infrastructure policy violations
-- Testing security configurations
-
-### Example Snapshot Test
-
-```typescript
-import { Template } from 'aws-cdk-lib/assertions';
-import { App, getStack, StackContext } from 'sst/constructs';
-import { initProject } from 'sst/project.js';
-import { MyConstruct } from './MyConstruct';
-
-describe('MyConstruct', () => {
-  beforeAll(async () => {
-    await initProject({});
-  });
-
-  it('matches snapshot', async () => {
-    const app = new App({ mode: 'deploy' });
-    const Stack = function (ctx: StackContext) {
-      new MyConstruct(ctx.stack, 'test');
-    };
-    app.stack(Stack);
-    await app.finish();
-
-    const template = Template.fromStack(getStack(Stack));
-    expect(template.toJSON()).toMatchSnapshot();
-  });
-});
-```
-
-### Snapshot Test Limitations
-
-1. **CDK Updates Cause Changes**
-   - CDK upgrades may add metadata or change resource organization
-   - Template structure changes don't mean your deployment is wrong
-   - Must manually review and accept new baseline
-
-2. **Context Changes Affect Output**
-   - Feature flags and context values alter synthesis
-   - Environment-specific context can cause different outputs
-
-3. **Too Broad for Regression Testing**
-   - Small unintended change buried in large diff
-   - Hard to identify what actually broke
-   - Fine-grained assertions are better for catching regressions
-
-### Best Practices for Snapshots
-
-1. **Combine with fine-grained assertions**
-
-   ```typescript
-   it('should enforce security', async () => {
-     // Fine-grained assertion for critical property
-     template.hasResourceProperties(
-       'AWS::S3::Bucket',
-       Match.objectLike({
-         BucketEncryption: Match.objectLike({
-           ServerSideEncryptionConfiguration: Match.anyValue(),
-         }),
-       })
-     );
-
-     // Snapshot to catch unexpected changes
-     expect(template.toJSON()).toMatchSnapshot();
-   });
-   ```
-
-2. **Review snapshot diffs carefully**
-   - Don't blindly accept changes
-   - Understand why template changed
-   - Verify change is intentional
-
-3. **Keep snapshots focused**
-   - Test individual constructs, not entire apps
-   - Smaller snapshots = easier to review diffs
-
-4. **Hold external factors constant**
-   - Use same CDK version during refactoring
-   - Don't change context values
-   - Lock down dependencies during refactoring session
-
-## Debugging Failed Tests
-
-### View Full Template
-
-```typescript
-it('debug test', async () => {
-  const app = new App({ mode: 'deploy' });
-  const Stack = function (ctx: StackContext) {
-    new MyConstruct(ctx.stack, 'test');
-  };
-  app.stack(Stack);
-  await app.finish();
-
-  const template = Template.fromStack(getStack(Stack));
-
-  // Print entire template
-  console.log(JSON.stringify(template.toJSON(), null, 2));
-});
-```
-
-### Find All Resources
-
-```typescript
-// Get all resources of a type
-const buckets = template.findResources('AWS::S3::Bucket');
-console.log(JSON.stringify(buckets, null, 2));
-
-// Get all resources in stack
-const allResources = template.toJSON().Resources;
-console.log(JSON.stringify(allResources, null, 2));
-```
-
-### Inspect Resource Properties
-
-```typescript
-const functions = template.findResources('AWS::Lambda::Function');
-const functionLogicalId = Object.keys(functions)[0];
-const functionProps = functions[functionLogicalId];
-console.log('Function Properties:', JSON.stringify(functionProps, null, 2));
 ```
 
 ## Common Pitfalls
@@ -1141,52 +272,387 @@ export default defineConfig({
 });
 ```
 
-## What to Test
+## AWS CDK Assertions
 
-### Testing Priorities
+### Import Assertions
 
-Focus on critical infrastructure properties that support your application features:
+```typescript
+import { Template, Match, Capture } from 'aws-cdk-lib/assertions';
+```
 
-**Priority 1: Resource Existence & Configuration**
+### Resource Counting
 
-- Required resources exist (Lambda, SQS, DynamoDB, API Gateway)
-- Correct configuration (runtime, handler, memory, timeout)
+```typescript
+// Exact count
+template.resourceCountIs('AWS::Lambda::Function', 1);
 
-**Priority 2: Resource Wiring**
+// At least one
+template.resourceCountIs('AWS::S3::Bucket', Match.anyValue());
+```
 
-- Resources connected correctly (Lambda → SQS, API Gateway → Lambda)
-- Event source mappings and integrations configured
+### Property Assertions
 
-**Priority 3: Security & IAM**
+**Always use `Match.objectLike()`** to avoid test brittleness when CDK updates add new properties.
 
-- IAM roles grant necessary permissions
-- Encryption enabled (at rest and in transit)
-- Public access blocked where needed
+```typescript
+// ✅ Flexible matching (recommended)
+template.hasResourceProperties(
+  'AWS::S3::Bucket',
+  Match.objectLike({
+    BucketEncryption: {
+      ServerSideEncryptionConfiguration: [
+        {
+          ServerSideEncryptionByDefault: {
+            SSEAlgorithm: 'AES256',
+          },
+        },
+      ],
+    },
+  })
+);
+```
 
-**Priority 4: Environment Configuration**
+### Match Utilities
 
-- Environment variables passed to functions
-- Variables reference correct resources (table names, ARNs)
-- Configuration matches stage requirements (dev vs prod)
+```typescript
+// Object with specific properties (ignores others)
+Match.objectLike({ Property: 'value' });
 
-**Priority 5: Infrastructure Policies**
+// Array containing specific items (ignores others)
+Match.arrayWith([Match.objectLike({ Key: 'Environment', Value: 'test' })]);
 
-- Resources meet organizational standards
-- Data persistence protected (retention policies, backups)
+// String pattern matching
+Match.stringLikeRegexp('arn:aws:s3:::my-bucket-.*');
 
-### Real-World Example: User Signup Email Feature
+// Any value (for counting or existence checks)
+Match.anyValue();
+
+// Absent property
+Match.absent();
+```
+
+### Capturing Values
+
+```typescript
+import { Capture } from 'aws-cdk-lib/assertions';
+
+const roleCapture = new Capture();
+template.hasResourceProperties('AWS::Lambda::Function', {
+  Role: roleCapture,
+});
+
+// Use captured value - extract logical ID from Fn::GetAtt
+const roleLogicalId = roleCapture.asObject()['Fn::GetAtt'][0];
+```
+
+**Capture `as*()` methods:**
+
+- `asString()` - for string values
+- `asNumber()` - for numeric values
+- `asObject()` - for JSON objects (like `Fn::GetAtt`, `Ref`)
+- `asArray()` - for arrays
+
+### Testing Resource References
+
+CloudFormation uses `{ "Ref": "LogicalResourceId" }` for references:
+
+```typescript
+// Get all Lambda functions
+const functions = template.findResources('AWS::Lambda::Function');
+const functionLogicalId = Object.keys(functions)[0];
+
+// Verify API Gateway references the function
+template.hasResourceProperties(
+  'AWS::ApiGateway::Method',
+  Match.objectLike({
+    Integration: Match.objectLike({
+      Uri: Match.objectLike({
+        'Fn::Join': Match.arrayWith([
+          Match.arrayWith([
+            Match.objectLike({
+              'Fn::GetAtt': [functionLogicalId, 'Arn'],
+            }),
+          ]),
+        ]),
+      }),
+    }),
+  })
+);
+```
+
+## Common Test Scenarios
+
+### 1. Grouped Testing Pattern (Recommended)
+
+**Target: 3-6 well-organized tests per stack instead of 10+ micro-tests.**
+
+```typescript
+describe('Main UI Stack', () => {
+  beforeAll(async () => {
+    await initProject({});
+  });
+
+  // Test 1: Groups CloudFront + S3 + security (related infrastructure)
+  it('should create CloudFront distribution with S3 bucket and security', async () => {
+    const app = new App({ mode: 'deploy' });
+    app.stack(Main);
+    await app.finish();
+    const template = Template.fromStack(getStack(Main));
+
+    // CloudFront distribution
+    template.resourceCountIs('AWS::CloudFront::Distribution', 1);
+    template.hasResourceProperties(
+      'AWS::CloudFront::Distribution',
+      Match.objectLike({
+        DistributionConfig: Match.objectLike({
+          Enabled: true,
+          DefaultCacheBehavior: Match.objectLike({
+            ViewerProtocolPolicy: Match.stringLikeRegexp(
+              'redirect-to-https|https-only'
+            ),
+            Compress: true,
+          }),
+        }),
+      })
+    );
+
+    // S3 bucket with security
+    template.resourceCountIs('AWS::S3::Bucket', 1);
+    template.hasResourceProperties(
+      'AWS::S3::Bucket',
+      Match.objectLike({
+        PublicAccessBlockConfiguration: {
+          BlockPublicAcls: true,
+          BlockPublicPolicy: true,
+          IgnorePublicAcls: true,
+          RestrictPublicBuckets: true,
+        },
+      })
+    );
+  });
+
+  // Test 2: Groups Lambda + API Gateway (related integration)
+  it('should create Lambda function with API Gateway for SSR', async () => {
+    // ... similar pattern
+  });
+
+  // Test 3: Groups ALL IAM permissions together
+  it('should configure IAM permissions for S3 and CloudFront', async () => {
+    // ... similar pattern
+  });
+
+  // Test 4: Stack outputs
+  it('should export MainSiteUrl as stack output', async () => {
+    // ... similar pattern
+  });
+});
+```
+
+**Performance comparison:**
+
+| Approach                     | Tests         | Duration        | Stack Syntheses |
+| ---------------------------- | ------------- | --------------- | --------------- |
+| ❌ Micro-tests (8 separate)  | 8             | ~14-18s         | 8               |
+| ✅ Grouped tests (optimized) | 4             | ~4-7s           | 4               |
+| **Improvement**              | **50% fewer** | **~60% faster** | **50% fewer**   |
+
+**Grouping strategies:**
+
+1. **By relationship**: CloudFront + S3, Lambda + API Gateway
+2. **By concern**: All IAM policies together, all security settings together
+3. **By scenario**: Default config in one test, custom overrides in another
+
+### 2. Testing Security Configuration
+
+```typescript
+it('should enforce S3 security best practices', async () => {
+  const app = new App({ mode: 'deploy' });
+  const Stack = function (ctx: StackContext) {
+    new MyBucket(ctx.stack, 'test');
+  };
+  app.stack(Stack);
+  await app.finish();
+
+  const template = Template.fromStack(getStack(Stack));
+
+  // Group: resource count + security properties + versioning
+  template.resourceCountIs('AWS::S3::Bucket', 1);
+  template.hasResourceProperties(
+    'AWS::S3::Bucket',
+    Match.objectLike({
+      BucketEncryption: Match.objectLike({
+        ServerSideEncryptionConfiguration: Match.arrayWith([
+          Match.objectLike({
+            ServerSideEncryptionByDefault: { SSEAlgorithm: 'AES256' },
+          }),
+        ]),
+      }),
+      PublicAccessBlockConfiguration: {
+        BlockPublicAcls: true,
+        BlockPublicPolicy: true,
+        IgnorePublicAcls: true,
+        RestrictPublicBuckets: true,
+      },
+      VersioningConfiguration: { Status: 'Enabled' },
+    })
+  );
+});
+```
+
+### 3. Testing Cross-Resource References
+
+Use `Capture` to verify resources are wired correctly:
+
+```typescript
+it('should wire Lambda to IAM role with correct permissions', async () => {
+  const app = new App({ mode: 'deploy' });
+  const Stack = function (ctx: StackContext) {
+    new ApiWithLambda(ctx.stack, 'test');
+  };
+  app.stack(Stack);
+  await app.finish();
+
+  const template = Template.fromStack(getStack(Stack));
+
+  // Capture the role reference from Lambda
+  const roleCapture = new Capture();
+  template.hasResourceProperties(
+    'AWS::Lambda::Function',
+    Match.objectLike({
+      Handler: 'handlers/processor.handler',
+      Role: roleCapture,
+    })
+  );
+
+  // Extract role logical ID and verify IAM policy
+  const roleLogicalId = roleCapture.asObject()['Fn::GetAtt'][0];
+  template.hasResourceProperties(
+    'AWS::IAM::Policy',
+    Match.objectLike({
+      PolicyDocument: Match.objectLike({
+        Statement: Match.arrayWith([
+          Match.objectLike({
+            Action: 'dynamodb:*',
+            Effect: 'Allow',
+          }),
+        ]),
+      }),
+      Roles: Match.arrayWith([{ Ref: roleLogicalId }]),
+    })
+  );
+});
+```
+
+**Common cross-resource patterns:**
+
+| Source Resource | Captured Property | Extract With                          | Linked Resource     |
+| --------------- | ----------------- | ------------------------------------- | ------------------- |
+| Lambda Function | Role (Fn::GetAtt) | `capture.asObject()['Fn::GetAtt'][0]` | IAM Policy          |
+| Lambda Function | Function ARN      | `capture.asObject()['Fn::GetAtt'][0]` | API Gateway         |
+| SQS Queue       | Queue ARN         | `capture.asObject()['Fn::GetAtt'][0]` | Lambda Event Source |
+| DynamoDB Table  | Table Ref         | `capture.asObject()['Ref']`           | Lambda env var      |
+
+### 4. Testing Multiple Resources
+
+```typescript
+it('should create multiple clients with OAuth configuration', async () => {
+  const app = new App({ mode: 'deploy' });
+  const Stack = function (ctx: StackContext) {
+    new UserPool(ctx.stack, 'test', {
+      clients: [
+        { clientName: 'web-client', allowedOAuthFlows: ['code'] },
+        { clientName: 'mobile-client', allowedOAuthFlows: ['implicit'] },
+      ],
+    });
+  };
+  app.stack(Stack);
+  await app.finish();
+
+  const template = Template.fromStack(getStack(Stack));
+
+  template.resourceCountIs('AWS::Cognito::UserPoolClient', 2);
+
+  template.hasResourceProperties(
+    'AWS::Cognito::UserPoolClient',
+    Match.objectLike({
+      ClientName: 'web-client',
+      AllowedOAuthFlows: ['code'],
+    })
+  );
+
+  template.hasResourceProperties(
+    'AWS::Cognito::UserPoolClient',
+    Match.objectLike({
+      ClientName: 'mobile-client',
+      AllowedOAuthFlows: ['implicit'],
+    })
+  );
+});
+```
+
+**Tip:** Use `description` property (if available) to make assertions more explicit when testing multiple instances of the same resource type.
+
+### 5. Testing Conditional Resources
+
+```typescript
+it('should handle optional resources based on configuration', async () => {
+  const app = new App({ mode: 'deploy' });
+  const Stack = function (ctx: StackContext) {
+    new UserPool(ctx.stack, 'test', {
+      // No clients provided
+      enableDomain: false,
+    });
+  };
+  app.stack(Stack);
+  await app.finish();
+
+  const template = Template.fromStack(getStack(Stack));
+
+  template.resourceCountIs('AWS::Cognito::UserPool', 1);
+  template.resourceCountIs('AWS::Cognito::UserPoolClient', 0);
+  template.resourceCountIs('AWS::Cognito::UserPoolDomain', 0);
+});
+```
+
+### 6. Testing Stage-Dependent Configuration
+
+```typescript
+it('should apply production settings for permanent stages', async () => {
+  await initProject({ stage: 'production' });
+
+  const app = new App({ mode: 'deploy' });
+  const Stack = function (ctx: StackContext) {
+    new MyConstruct(ctx.stack, 'test');
+  };
+  app.stack(Stack);
+  await app.finish();
+
+  const template = Template.fromStack(getStack(Stack));
+
+  // Group: removal policy + backup + point-in-time recovery
+  template.hasResourceProperties(
+    'AWS::DynamoDB::Table',
+    Match.objectLike({
+      DeletionPolicy: 'Retain',
+      PointInTimeRecoverySpecification: {
+        PointInTimeRecoveryEnabled: true,
+      },
+    })
+  );
+
+  template.hasResourceProperties(
+    'AWS::S3::Bucket',
+    Match.objectLike({
+      DeletionPolicy: 'Retain',
+      VersioningConfiguration: { Status: 'Enabled' },
+    })
+  );
+});
+```
+
+## Real-World Example: User Signup Email Feature
 
 **Feature requirement:** When a user signs up, send them a welcome email.
-
-**Infrastructure needed:**
-
-1. API Gateway endpoint for signup
-2. Lambda function to handle signup API request
-3. SQS queue to receive signup events
-4. Lambda function to process queue and send emails
-5. IAM permissions for SES (Simple Email Service)
-6. Dead letter queue for failed messages
-7. Environment variables with email configuration
 
 **Infrastructure tests to write:**
 
@@ -1205,16 +671,12 @@ describe('User Signup Email Stack', () => {
     await app.finish();
     const template = Template.fromStack(getStack(Stack));
 
-    // Verify API Gateway exists and routes to Lambda
+    // API Gateway + Lambda handler
     template.resourceCountIs('AWS::ApiGatewayV2::Api', 1);
     template.hasResourceProperties(
       'AWS::ApiGatewayV2::Route',
-      Match.objectLike({
-        RouteKey: 'POST /signup',
-      })
+      Match.objectLike({ RouteKey: 'POST /signup' })
     );
-
-    // Verify signup handler Lambda exists
     template.hasResourceProperties(
       'AWS::Lambda::Function',
       Match.objectLike({
@@ -1224,206 +686,243 @@ describe('User Signup Email Stack', () => {
     );
   });
 
-  it('should create SQS queue for signup events with DLQ', async () => {
-    const app = new App({ mode: 'deploy' });
-    const Stack = function (ctx: StackContext) {
-      new UserSignupStack(ctx.stack, 'test');
-    };
-    app.stack(Stack);
-    await app.finish();
-    const template = Template.fromStack(getStack(Stack));
-
-    // Verify main queue exists
-    template.resourceCountIs('AWS::SQS::Queue', 2); // Main + DLQ
-
-    template.hasResourceProperties(
-      'AWS::SQS::Queue',
-      Match.objectLike({
-        QueueName: Match.stringLikeRegexp('signup-events'),
-        RedrivePolicy: Match.objectLike({
-          maxReceiveCount: 3,
-        }),
-      })
-    );
-
-    // Verify dead letter queue exists
-    template.hasResourceProperties(
-      'AWS::SQS::Queue',
-      Match.objectLike({
-        QueueName: Match.stringLikeRegexp('signup-events-dlq'),
-      })
-    );
+  it('should create SQS queue with DLQ for signup events', async () => {
+    // ... SQS + DLQ configuration
   });
 
-  it('should wire Lambda to process SQS queue messages', async () => {
-    const app = new App({ mode: 'deploy' });
-    const Stack = function (ctx: StackContext) {
-      new UserSignupStack(ctx.stack, 'test');
-    };
-    app.stack(Stack);
-    await app.finish();
-    const template = Template.fromStack(getStack(Stack));
-
-    // Verify email processor Lambda exists
-    template.hasResourceProperties(
-      'AWS::Lambda::Function',
-      Match.objectLike({
-        Handler: 'email-processor.handler',
-      })
-    );
-
-    // Verify Lambda is configured to listen to SQS
-    template.hasResourceProperties(
-      'AWS::Lambda::EventSourceMapping',
-      Match.objectLike({
-        BatchSize: 10,
-        FunctionName: Match.anyValue(), // References email processor Lambda
-        EventSourceArn: Match.anyValue(), // References SQS queue
-      })
-    );
-  });
-
-  it('should configure Lambda with SES permissions and email config', async () => {
-    const app = new App({ mode: 'deploy' });
-    const Stack = function (ctx: StackContext) {
-      new UserSignupStack(ctx.stack, 'test');
-    };
-    app.stack(Stack);
-    await app.finish();
-    const template = Template.fromStack(getStack(Stack));
-
-    // Verify Lambda has environment variables for email
-    template.hasResourceProperties(
-      'AWS::Lambda::Function',
-      Match.objectLike({
-        Handler: 'email-processor.handler',
-        Environment: Match.objectLike({
-          Variables: Match.objectLike({
-            SENDER_EMAIL: 'noreply@example.com',
-            REGION: Match.anyValue(),
-          }),
-        }),
-      })
-    );
-
-    // Verify IAM role has SES send email permissions
-    template.hasResourceProperties(
-      'AWS::IAM::Policy',
-      Match.objectLike({
-        PolicyDocument: Match.objectLike({
-          Statement: Match.arrayWith([
-            Match.objectLike({
-              Action: Match.arrayWith(['ses:SendEmail', 'ses:SendRawEmail']),
-              Effect: 'Allow',
-              Resource: '*',
-            }),
-          ]),
-        }),
-      })
-    );
+  it('should wire Lambda to process SQS and have SES permissions', async () => {
+    // ... Event source mapping + IAM permissions
   });
 });
 ```
 
 **What these tests verify:**
 
-1. ✅ API Gateway endpoint exists and routes to signup Lambda
-2. ✅ Signup handler Lambda has correct configuration
-3. ✅ SQS queue exists for signup events with DLQ configured
-4. ✅ Email processor Lambda exists and is wired to SQS queue
-5. ✅ Event source mapping connects Lambda to SQS with batch size
-6. ✅ Lambda has environment variables with email configuration
-7. ✅ Lambda IAM role has permissions to send emails via SES
+- ✅ API Gateway endpoint exists and routes to signup Lambda
+- ✅ SQS queue exists with DLQ configured
+- ✅ Lambda is wired to SQS with correct permissions
+- ✅ IAM role has SES send email permissions
 
 **What these tests do NOT verify:**
 
-- ❌ Whether the signup API actually works when you call it (integration test)
-- ❌ Whether the email sending code correctly formats emails (unit test)
-- ❌ Whether SES actually sends the email (integration test)
-- ❌ Whether users receive emails in their inbox (end-to-end test)
+- ❌ Whether emails actually arrive (integration/E2E test)
+- ❌ Email content formatting (unit test)
 
-This is infrastructure testing: **verifying resources exist and are configured correctly to support the feature**.
+## Debugging Failed Tests
 
-### What NOT to Test
+### View Full Template
 
-Infrastructure tests verify **configuration**, not **behavior**. They answer "Is the infrastructure set up correctly?" not "Does the application work?"
+```typescript
+it('debug test', async () => {
+  const app = new App({ mode: 'deploy' });
+  const Stack = function (ctx: StackContext) {
+    new MyConstruct(ctx.stack, 'test');
+  };
+  app.stack(Stack);
+  await app.finish();
 
-**Don't test:**
+  const template = Template.fromStack(getStack(Stack));
 
-- ❌ Application logic (use unit tests)
-- ❌ API behavior (use integration tests)
-- ❌ End-to-end workflows (use E2E tests)
-- ❌ CDK implementation details or every CDK-generated property
+  // Print entire template
+  console.log(JSON.stringify(template.toJSON(), null, 2));
+});
+```
+
+### Find All Resources
+
+```typescript
+// Get all resources of a type
+const buckets = template.findResources('AWS::S3::Bucket');
+console.log(JSON.stringify(buckets, null, 2));
+
+// Get all resources in stack
+const allResources = template.toJSON().Resources;
+console.log(JSON.stringify(allResources, null, 2));
+```
+
+### Inspect Resource Properties
+
+```typescript
+const functions = template.findResources('AWS::Lambda::Function');
+const functionLogicalId = Object.keys(functions)[0];
+const functionProps = functions[functionLogicalId];
+console.log('Function Properties:', JSON.stringify(functionProps, null, 2));
+```
+
+## Using AWS IAC MCP Tools
+
+The AWS IAC MCP provides tools for working with AWS infrastructure code. Use these to write accurate tests and understand AWS resource configurations.
+
+### When to Use Which Tool
+
+| Task                                          | Tool                                       |
+| --------------------------------------------- | ------------------------------------------ |
+| Understanding CDK assertions (Capture, Match) | `search_cdk_documentation`                 |
+| Finding CloudFormation property names         | `search_cloudformation_documentation`      |
+| Finding code examples                         | `search_cdk_samples_and_constructs`        |
+| Understanding CDK constructs (L1/L2/L3)       | `search_cdk_documentation`                 |
+| Learning about CDK Aspects                    | `search_cdk_documentation`                 |
+| Reading full documentation page               | `read_iac_documentation_page`              |
+| Debugging deployment failures                 | `troubleshoot_cloudformation_deployment`   |
+| Validating template syntax                    | `validate_cloudformation_template`         |
+| Checking security compliance                  | `check_cloudformation_template_compliance` |
+
+### Key Distinction
+
+- **`search_cdk_documentation`** - CDK APIs, construct usage, testing utilities, app lifecycle, Aspects
+- **`search_cloudformation_documentation`** - CloudFormation resource types, property names, valid values (what you assert against)
+
+### Example Queries
+
+```
+// CDK assertions
+search_cdk_documentation("Capture asString asObject assertions")
+search_cdk_documentation("Match objectLike arrayWith stringLikeRegexp")
+
+// CloudFormation properties for assertions
+search_cloudformation_documentation("AWS::Lambda::Function properties")
+search_cloudformation_documentation("AWS::S3::Bucket PublicAccessBlockConfiguration")
+search_cloudformation_documentation("AWS::IAM::Policy PolicyDocument Statement")
+
+// Code examples
+search_cdk_samples_and_constructs("Lambda API Gateway integration TypeScript")
+```
+
+### Quick Reference: Common CloudFormation Properties
+
+| Resource Type            | Common Properties to Test                                                      |
+| ------------------------ | ------------------------------------------------------------------------------ |
+| `AWS::Lambda::Function`  | Handler, Runtime, Role, Timeout, MemorySize, Environment.Variables             |
+| `AWS::S3::Bucket`        | BucketEncryption, PublicAccessBlockConfiguration, VersioningConfiguration      |
+| `AWS::DynamoDB::Table`   | KeySchema, AttributeDefinitions, BillingMode, PointInTimeRecoverySpecification |
+| `AWS::IAM::Policy`       | PolicyDocument.Statement (Action, Effect, Resource), Roles                     |
+| `AWS::IAM::Role`         | AssumeRolePolicyDocument, Policies, ManagedPolicyArns                          |
+| `AWS::SQS::Queue`        | QueueName, VisibilityTimeout, RedrivePolicy                                    |
+| `AWS::Cognito::UserPool` | Policies.PasswordPolicy, AliasAttributes, AutoVerifiedAttributes               |
+
+## CloudFormation Property Patterns
+
+### PascalCase in CloudFormation
+
+```typescript
+// CDK Input (camelCase)
+new Bucket(stack, 'Bucket', {
+  bucketName: 'my-bucket',
+  encryption: BucketEncryption.S3_MANAGED,
+});
+
+// CloudFormation Output (PascalCase) - use in assertions
+{
+  BucketName: 'my-bucket',
+  BucketEncryption: { /* ... */ }
+}
+```
+
+### Reference Functions
+
+```typescript
+// Direct reference
+{ "Ref": "LogicalResourceId" }
+
+// Get attribute
+{ "Fn::GetAtt": ["LogicalResourceId", "Arn"] }
+
+// Join strings
+{ "Fn::Join": ["", ["prefix-", { "Ref": "ResourceId" }]] }
+```
+
+### Boolean Values
+
+```typescript
+// Some use boolean
+BlockPublicAcls: true;
+
+// Some use string
+Status: 'Enabled'; // not true/false
+```
+
+## Snapshot Testing
+
+### When to Use
+
+**✅ Good use cases:**
+
+- Refactoring construct implementations while keeping outputs the same
+- Ensuring changes to shared constructs don't unexpectedly affect other stacks
+
+**❌ Not ideal for:**
+
+- Primary regression testing (too broad, fails on CDK updates)
+- Catching specific infrastructure policy violations
+
+### Example
+
+```typescript
+it('matches snapshot', async () => {
+  const app = new App({ mode: 'deploy' });
+  const Stack = function (ctx: StackContext) {
+    new MyConstruct(ctx.stack, 'test');
+  };
+  app.stack(Stack);
+  await app.finish();
+
+  const template = Template.fromStack(getStack(Stack));
+  expect(template.toJSON()).toMatchSnapshot();
+});
+```
+
+### Best Practices
+
+1. **Combine with fine-grained assertions** - Use snapshots alongside specific property tests
+2. **Review diffs carefully** - Don't blindly accept changes
+3. **Keep snapshots focused** - Test individual constructs, not entire apps
+4. **Hold external factors constant** - Use same CDK version during refactoring
 
 ## Writing Effective Tests
 
 ### Group Related Assertions
 
-Group multiple related assertions within a single test to minimize stack syntheses and improve maintainability.
-
-**❌ Over-fragmented:**
-
 ```typescript
+// ❌ Over-fragmented (3 stack syntheses)
 it('should create user pool', async () => {
-  template.resourceCountIs('AWS::Cognito::UserPool', 1);
+  /* ... */
 });
-
 it('should enforce minimum password length', async () => {
-  template.hasResourceProperties(
-    'AWS::Cognito::UserPool',
-    Match.objectLike({ PasswordPolicy: Match.objectLike({ MinimumLength: 8 }) })
-  );
+  /* ... */
 });
-
 it('should auto-verify email', async () => {
-  template.hasResourceProperties(
-    'AWS::Cognito::UserPool',
-    Match.objectLike({ AutoVerifiedAttributes: ['email'] })
-  );
+  /* ... */
 });
-// = 3 stack syntheses for same resource
-```
 
-**✅ Grouped by feature:**
-
-```typescript
+// ✅ Grouped (1 stack synthesis, 3x faster)
 it('should configure user pool with security settings', async () => {
   template.resourceCountIs('AWS::Cognito::UserPool', 1);
   template.hasResourceProperties(
     'AWS::Cognito::UserPool',
     Match.objectLike({
-      PasswordPolicy: Match.objectLike({ MinimumLength: 8 }),
+      Policies: Match.objectLike({
+        PasswordPolicy: Match.objectLike({ MinimumLength: 8 }),
+      }),
       AutoVerifiedAttributes: ['email'],
       MfaConfiguration: 'OPTIONAL',
     })
   );
 });
-// = 1 stack synthesis, 3x faster
 ```
-
-**Group by:** Resource type, feature area (security, auth), or logical concern.
 
 ### Use Descriptive Test Names
 
-**✅ Good:** Describes the expected behavior
-
 ```typescript
+// ✅ Good - describes expected behavior
 it('should enforce 8-character minimum password length', async () => {});
 it('should block all public S3 bucket access', async () => {});
-it('should configure Lambda with SES permissions and email config', async () => {});
-```
 
-**❌ Bad:** Too vague
-
-```typescript
+// ❌ Bad - too vague
 it('test password policy', async () => {});
 it('should work', async () => {});
-it('creates resources', async () => {});
 ```
 
 ### Extract Common Test Setup
-
-Avoid repetitive setup by creating helper functions:
 
 ```typescript
 function createTestStack(props?: Partial<MyStackProps>) {
