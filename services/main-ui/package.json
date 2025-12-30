@@ -9,7 +9,9 @@
     "remove": "sst remove",
     "console": "sst console",
     "lint": "eslint \"**/*.ts*\"",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "@infra/main-api": "workspace:*",
@@ -28,6 +30,7 @@
     "eslint": "catalog:",
     "glob": "^13.0.0",
     "sst": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

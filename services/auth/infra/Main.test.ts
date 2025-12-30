@@ -17,40 +17,22 @@ describe('Main stack', () => {
     await initProject({});
   });
 
-  describe('UserPool creation', () => {
-    it('should create a UserPool with id "main"', async () => {
-      const app = new App({ mode: 'deploy' });
-      app.stack(Main);
+  it('should create UserPool with client configuration and stack outputs', async () => {
+    const app = new App({ mode: 'deploy' });
+    app.stack(Main);
 
-      await app.finish();
+    await app.finish();
 
-      const template = Template.fromStack(getStack(Main));
-      template.resourceCountIs('AWS::Cognito::UserPool', 1);
+    const template = Template.fromStack(getStack(Main));
+
+    // Group: UserPool creation and client configuration
+    template.resourceCountIs('AWS::Cognito::UserPool', 1);
+    template.hasResourceProperties('AWS::Cognito::UserPoolClient', {
+      ClientName: 'main',
+      GenerateSecret: true,
     });
 
-    it('should configure UserPool client with generateSecret', async () => {
-      const app = new App({ mode: 'deploy' });
-      app.stack(Main);
-
-      await app.finish();
-
-      const template = Template.fromStack(getStack(Main));
-      template.hasResourceProperties('AWS::Cognito::UserPoolClient', {
-        ClientName: 'main',
-        GenerateSecret: true,
-      });
-    });
-  });
-
-  describe('stack outputs', () => {
-    it('should add UserPoolId to stack outputs', async () => {
-      const app = new App({ mode: 'deploy' });
-      app.stack(Main);
-
-      await app.finish();
-
-      const template = Template.fromStack(getStack(Main));
-      template.hasOutput('UserPoolId', {});
-    });
+    // Group: Stack outputs
+    template.hasOutput('UserPoolId', {});
   });
 });
