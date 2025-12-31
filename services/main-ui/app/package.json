@@ -15,14 +15,18 @@
     "test:run": "vitest run"
   },
   "dependencies": {
+    "@contract/internal-api": "workspace:*",
+    "@lib/ui": "workspace:*",
+    "@orpc/client": "catalog:",
+    "@orpc/contract": "catalog:",
+    "@orpc/openapi-client": "catalog:",
     "@tanstack/react-router": "^1.143.4",
     "@tanstack/react-router-devtools": "^1.143.4",
     "@tanstack/react-start": "^1.143.4",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "@lib/ui": "workspace:*",
-    "zod": "catalog:",
-    "react-icons": "catalog:"
+    "react-icons": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "catalog:",

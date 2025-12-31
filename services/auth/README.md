@@ -1,12 +1,40 @@
 # Auth Service
 
-Authentication service using AWS Cognito with custom authentication flows.
+Authentication service using AWS Cognito with custom authentication flows and an internal API for inter-service communication.
 
 ## Overview
 
-This service provides passwordless authentication for the application using AWS Cognito with custom Lambda triggers. It currently supports **Magic Link** authentication and is architected to support additional methods like FIDO2/WebAuthn and SMS OTP in the future.
+This service provides:
 
-## Architecture
+1. **Passwordless authentication** using AWS Cognito with custom Lambda triggers (Magic Link, with support for FIDO2/WebAuthn and SMS OTP planned)
+2. **Internal API** built with ORPC for type-safe RPC calls between services
+
+## Internal API
+
+The auth service implements the `@contract/internal-api/auth` contract for type-safe inter-service communication.
+
+See [Internal API Documentation](../../docs/internal-api.md) for details on:
+
+- Contract-first API design
+- Creating and consuming clients
+- Testing procedures
+- OpenAPI specification
+
+### Quick Reference
+
+```typescript
+// Consuming the auth API from another service
+import { createORPCClient } from '@orpc/client';
+import { contract } from '@contract/internal-api/auth';
+
+const client = createORPCClient(contract, {
+  baseURL: process.env.AUTH_API_URL,
+});
+
+const user = await client.user.get({ id: 'user-123' });
+```
+
+## Cognito Authentication
 
 ### Infrastructure (`infra/`)
 

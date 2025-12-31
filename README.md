@@ -16,26 +16,29 @@ A modern, full-stack monorepo powered by [TanStack Start](https://tanstack.com/s
 - **TypeScript**: v5.9.3
 - **Linting**: ESLint (flat config)
 - **Formatting**: Prettier
+- **Infrastructure**: SST v2, AWS CDK
+- **Internal APIs**: ORPC (contract-first, type-safe RPC)
 
 ## Structure
 
 ```
 .
 ├── services/
-│   └── main-ui/              # TanStack Start application
+│   ├── main-ui/              # TanStack Start application
+│   ├── main-api/             # Main API service (SST + Lambda)
+│   └── auth/                 # Auth service (Cognito + Internal API)
 ├── packages/
 │   ├── ui/                   # Shared UI components (Chakra UI)
+│   ├── contract-internal-api/ # Shared API contracts (ORPC)
+│   ├── sst-constructs/       # Shared SST/CDK constructs
+│   ├── sst-helpers/          # SST utility functions
 │   ├── config-eslint/        # Shared ESLint configurations
-│   │   ├── index.js          # Default TypeScript config
-│   │   ├── react.js          # React-specific config
-│   │   └── tanstack.js       # TanStack Start config
 │   └── config-tsconfig/      # Shared TypeScript configurations
-│       ├── base.json         # Base TypeScript config
-│       ├── react-library.json # React library config
-│       └── tanstack.json     # TanStack Start config
+├── docs/                     # Documentation
+│   ├── internal-api.md       # Internal API guide
+│   ├── iac-testing.md        # Infrastructure testing guide
+│   └── iac-patterns.md       # Infrastructure patterns
 └── .vscode/                  # VS Code workspace settings
-    ├── settings.json         # Editor settings (format on save)
-    └── extensions.json       # Recommended extensions
 ```
 
 ## Prerequisites
@@ -92,6 +95,12 @@ Format code with Prettier:
 ```bash
 pnpm format
 ```
+
+## Documentation
+
+- [Internal API Guide](docs/internal-api.md) - Type-safe inter-service communication with ORPC
+- [IAC Testing Guide](docs/iac-testing.md) - Testing AWS infrastructure code
+- [IAC Patterns](docs/iac-patterns.md) - Infrastructure code patterns
 
 ## Package Catalog
 
@@ -155,8 +164,26 @@ The `ui` package re-exports Chakra UI components and provides shared UI utilitie
 Usage:
 
 ```tsx
-import { Button, Box, Stack } from 'ui';
+import { Button, Box, Stack } from '@lib/ui';
 ```
+
+### Internal API Contracts
+
+The `contract-internal-api` package defines shared API contracts for type-safe inter-service communication using ORPC.
+
+Usage:
+
+```typescript
+// In service implementation
+import { implement } from '@orpc/server';
+import { contract } from '@contract/internal-api/auth';
+
+const getUser = implement(contract.user.get).handler(async ({ input }) => {
+  return { id: input.id, email: 'user@example.com' };
+});
+```
+
+See [Internal API Guide](docs/internal-api.md) for details.
 
 ## VS Code Setup
 
@@ -171,7 +198,7 @@ The repository includes VS Code configuration for optimal development experience
 
 1. Create a new directory in `packages/` or `services/`
 2. Initialize with `package.json`
-3. Use workspace protocol for internal dependencies: `"ui": "workspace:*"`
+3. Use workspace protocol for internal dependencies: `"@lib/ui": "workspace:*"`
 4. Use catalog for common dependencies: `"react": "catalog:"`
 
 ## Scripts Reference
@@ -194,6 +221,8 @@ The repository includes VS Code configuration for optimal development experience
 - [Turborepo Documentation](https://turbo.build/repo/docs)
 - [pnpm Workspace Catalogs](https://pnpm.io/catalogs)
 - [pnpm Documentation](https://pnpm.io/)
+- [ORPC Documentation](https://orpc.dev/docs/getting-started)
+- [SST Documentation](https://docs.sst.dev/)
 
 ## Available AI Agents
 

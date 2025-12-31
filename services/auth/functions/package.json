@@ -21,9 +21,16 @@
     "@aws-sdk/client-dynamodb": "catalog:",
     "@aws-sdk/client-kms": "catalog:",
     "@aws-sdk/client-ses": "catalog:",
-    "@aws-sdk/lib-dynamodb": "catalog:"
+    "@aws-sdk/lib-dynamodb": "catalog:",
+    "@contract/internal-api": "workspace:*",
+    "@orpc/openapi": "catalog:",
+    "@orpc/server": "catalog:",
+    "zod": "catalog:",
+    "express": "^4",
+    "serverless-http": "^4.0.0"
   },
   "devDependencies": {
+    "@types/express": "^4",
     "@config/eslint": "workspace:*",
     "@config/tsconfig": "workspace:*",
     "@test/local-dynamodb": "workspace:*",
