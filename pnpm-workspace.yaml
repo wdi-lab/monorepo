@@ -3,7 +3,6 @@ packages:
   - services/*/app
   - services/*/functions
   - packages/*
-  - test-local-dynamodb
 
 catalog:
   '@aws-sdk/client-dynamodb': 3.632.0
