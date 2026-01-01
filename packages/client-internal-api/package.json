@@ -1,0 +1,41 @@
+{
+  "name": "@client/internal-api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "lint": "eslint \"**/*.ts*\"",
+    "type-check": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run"
+  },
+  "dependencies": {
+    "@aws-crypto/sha256-js": "^5.2.0",
+    "@aws-sdk/credential-provider-node": "catalog:",
+    "@orpc/client": "catalog:",
+    "@orpc/contract": "catalog:",
+    "@orpc/openapi-client": "catalog:",
+    "@smithy/signature-v4": "^5.3.7",
+    "@smithy/types": "^4.11.0"
+  },
+  "devDependencies": {
+    "@config/eslint": "workspace:*",
+    "@config/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

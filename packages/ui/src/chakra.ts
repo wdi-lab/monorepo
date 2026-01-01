@@ -8,6 +8,7 @@ export {
 
   // Layout
   Box,
+  Center,
   Flex,
   Container,
   Stack,

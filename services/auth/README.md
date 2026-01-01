@@ -136,6 +136,20 @@ const magicLink = new MagicLink(stack, 'magic-link', {
 });
 ```
 
+### Local Development
+
+When running services locally that consume the auth internal API, you need AWS credentials for request signing:
+
+```bash
+# Using aws-vault (recommended)
+aws-vault exec <profile> -- pnpm dev
+
+# Or with environment variables
+AWS_ACCESS_KEY_ID=xxx AWS_SECRET_ACCESS_KEY=xxx AWS_REGION=us-east-1 pnpm dev
+```
+
+See [Internal API Documentation](../../docs/internal-api.md) for more details on local development setup.
+
 ### Environment Variables
 
 The Lambda handlers use the following environment variables (automatically configured):

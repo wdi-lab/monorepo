@@ -428,6 +428,45 @@ cd services/<service> && pnpm type-check
 cd services/<service> && pnpm run deploy -- --stage dev
 ```
 
+### Local Development with AWS Credentials
+
+When running services locally that consume internal APIs, you need AWS credentials for request signing. The `@client/internal-api` package uses AWS Signature V4 to authenticate requests.
+
+**Using aws-vault (recommended):**
+
+```bash
+# Start dev server with credentials
+cd services/main-ui/app
+aws-vault exec <profile> -- pnpm dev
+```
+
+**Using environment variables:**
+
+```bash
+AWS_ACCESS_KEY_ID=xxx AWS_SECRET_ACCESS_KEY=xxx AWS_REGION=us-east-1 pnpm dev
+```
+
+**Auto-detection features:**
+
+The internal API client automatically:
+
+- Detects region from API Gateway URLs (`*.execute-api.{region}.amazonaws.com`)
+- Detects region from Lambda Function URLs (`*.lambda-url.{region}.on.aws`)
+- Detects service name (`execute-api` or `lambda`) for correct signing
+- Uses the default AWS credential provider chain
+
+**Disabling signing (for local mocks):**
+
+```typescript
+import { createInternalApiClient } from '@client/internal-api';
+
+const client = createInternalApiClient({
+  contract,
+  baseUrl: 'http://localhost:3001',
+  awsSignatureV4: false, // Disable signing for local development
+});
+```
+
 ## Resources
 
 - [ORPC Documentation](https://orpc.dev/docs/getting-started)

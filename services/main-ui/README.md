@@ -75,6 +75,25 @@ pnpm dev --filter @app/main-ui
 
 The dev server runs at `http://localhost:3000`.
 
+### Running with AWS Credentials
+
+Server functions that call internal APIs require AWS credentials for request signing. Use `aws-vault` or another credential provider:
+
+```bash
+# Using aws-vault
+cd services/main-ui/app
+aws-vault exec <profile> -- pnpm dev
+
+# Or with AWS environment variables
+AWS_ACCESS_KEY_ID=xxx AWS_SECRET_ACCESS_KEY=xxx AWS_REGION=us-west-2 pnpm dev
+```
+
+The internal API client automatically:
+
+- Detects region from API Gateway/Lambda Function URLs
+- Uses the default AWS credential provider chain
+- Signs requests with AWS Signature V4
+
 ## Commands
 
 From `services/main-ui/app`:

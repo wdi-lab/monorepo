@@ -64,6 +64,20 @@ pnpm dev
 
 The main-ui service will be available at `http://localhost:3000`
 
+#### Running with AWS Credentials
+
+Services that call internal APIs (via `@client/internal-api`) require AWS credentials for request signing. Use `aws-vault` or set environment variables:
+
+```bash
+# Using aws-vault (recommended)
+aws-vault exec <profile> -- pnpm dev
+
+# Or with AWS environment variables
+AWS_ACCESS_KEY_ID=xxx AWS_SECRET_ACCESS_KEY=xxx AWS_REGION=us-east-1 pnpm dev
+```
+
+The internal API client automatically detects region from API Gateway/Lambda URLs and signs requests with AWS Signature V4.
+
 ### Build
 
 Build all packages and services:
