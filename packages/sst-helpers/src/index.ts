@@ -3,3 +3,4 @@ export * as dns from './dns.ts';
 export * as deploy from './deploy.ts';
 export * as env from './env.ts';
 export * as removalPolicy from './removalPolicy.ts';
+export * as serviceConfig from './serviceConfig.ts';

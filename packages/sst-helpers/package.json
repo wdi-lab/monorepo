@@ -28,6 +28,7 @@
     "@config/tsconfig": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
     "aws-cdk-lib": "catalog:",
+    "constructs": "catalog:",
     "eslint": "catalog:",
     "sst": "catalog:",
     "tsup": "catalog:",

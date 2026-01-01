@@ -16,19 +16,22 @@ Internal APIs enable type-safe RPC calls between services using:
 ┌─────────────────────────────────────────────────────────────────┐
 │                    @contract/internal-api                        │
 │  ┌─────────────────────────────────────────────────────────┐    │
-│  │  contract = { user: { get: oc.route(...).input(...) } } │    │
+│  │  contract = { resource: { get: oc.route(...) } }        │    │
 │  └─────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────┘
                     │                           │
          implements │                           │ imports
                     ▼                           ▼
-┌──────────────────────────────┐    ┌──────────────────────────────┐
-│       Auth Service           │    │     Consuming Service        │
-│  ┌────────────────────────┐  │    │  ┌────────────────────────┐  │
-│  │ implement(contract)    │  │    │  │ createORPCClient()     │  │
-│  │   .handler(...)        │  │    │  │   .user.get({ id })    │  │
-│  └────────────────────────┘  │    │  └────────────────────────┘  │
-└──────────────────────────────┘    └──────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                     Shared Internal API                          │
+│  ┌────────────────────────┐    ┌────────────────────────┐       │
+│  │ Provider Service       │    │ Consumer Service       │       │
+│  │ implement(contract)    │    │ createORPCClient()     │       │
+│  │   .handler(...)        │    │   .resource.get({...}) │       │
+│  └────────────────────────┘    └────────────────────────┘       │
+│                                                                  │
+│  HTTP API Gateway (v2) with IAM Authorization                    │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ## Contracts
@@ -36,23 +39,23 @@ Internal APIs enable type-safe RPC calls between services using:
 Contracts define the API shape using `@orpc/contract` with Zod schemas:
 
 ```typescript
-// packages/contract-internal-api/src/auth.ts
+// packages/contract-internal-api/src/<service>.ts
 import { oc } from '@orpc/contract';
 import * as z from 'zod';
 
-const UserSchema = z.object({
+const ResourceSchema = z.object({
   id: z.string(),
-  email: z.email(),
+  name: z.string(),
 });
 
-export const getUser = oc
-  .route({ method: 'GET', path: '/users/{id}' })
-  .input(UserSchema.pick({ id: true }))
-  .output(UserSchema);
+export const getResource = oc
+  .route({ method: 'GET', path: '/resources/{id}' })
+  .input(ResourceSchema.pick({ id: true }))
+  .output(ResourceSchema);
 
 export const contract = {
-  user: {
-    get: getUser,
+  resource: {
+    get: getResource,
   },
 };
 ```
@@ -68,32 +71,34 @@ export const contract = {
 Services implement contracts using `@orpc/server`:
 
 ```typescript
-// services/auth/functions/src/api/router.ts
+// services/<service>/functions/src/internal-api/router.ts
 import { implement } from '@orpc/server';
-import { contract } from '@contract/internal-api/auth';
+import { contract } from '@contract/internal-api/<service>';
 
-const getUser = implement(contract.user.get).handler(async ({ input }) => {
-  // Implementation with full type safety
-  return {
-    id: input.id,
-    email: 'user@example.com',
-  };
-});
+const getResource = implement(contract.resource.get).handler(
+  async ({ input }) => {
+    return {
+      id: input.id,
+      name: 'Example Resource',
+    };
+  }
+);
 
 export const router = {
-  user: {
-    get: getUser,
+  resource: {
+    get: getResource,
   },
 };
 ```
 
 ### Lambda Handler
 
-The handler uses ORPC's OpenAPI handler with Express:
+The handler uses ORPC's OpenAPI handler with Express. The `prefix` must match the API Gateway route prefix:
 
 ```typescript
-// services/auth/functions/src/api/handler.ts
+// services/<service>/functions/src/internal-api/handler.ts
 import { OpenAPIHandler } from '@orpc/openapi/node';
+import { onError } from '@orpc/server';
 import { router } from './router.js';
 
 const openApiHandler = new OpenAPIHandler(router, {
@@ -102,6 +107,16 @@ const openApiHandler = new OpenAPIHandler(router, {
       console.error('OpenAPI Error:', error);
     }),
   ],
+});
+
+app.use('*', async (req, res, next) => {
+  const { matched } = await openApiHandler.handle(req, res, {
+    prefix: '/<service>', // Must match API Gateway route prefix
+    context: {},
+  });
+
+  if (matched) return;
+  next();
 });
 ```
 
@@ -112,49 +127,36 @@ const openApiHandler = new OpenAPIHandler(router, {
 Create a type-safe client using `@orpc/client` with `OpenAPILink`:
 
 ```typescript
-// services/main-ui/app/src/clients/auth.ts
+// services/<consumer>/app/src/internal-api/<provider>.ts
 import type { ContractRouterClient } from '@orpc/contract';
 import type { JsonifiedClient } from '@orpc/openapi-client';
 import { createORPCClient } from '@orpc/client';
 import { OpenAPILink } from '@orpc/openapi-client/fetch';
-import { contract } from '@contract/internal-api/auth';
+import { contract } from '@contract/internal-api/<provider>';
 
 const link = new OpenAPILink(contract, {
-  url: () => {
-    if (typeof window !== 'undefined') {
-      return `${window.location.origin}/api/auth`;
-    }
-    return process.env.AUTH_API_URL || 'http://localhost:3001';
-  },
+  url: process.env.INTERNAL_API_URL,
   headers: () => ({
     'Content-Type': 'application/json',
   }),
 });
 
-export const authClient: JsonifiedClient<
-  ContractRouterClient<typeof contract>
-> = createORPCClient(link);
+export const client: JsonifiedClient<ContractRouterClient<typeof contract>> =
+  createORPCClient(link);
 ```
 
 ### Using Client in TanStack Start Server Functions
 
-Use the client within TanStack Start server functions to make internal API calls:
-
 ```typescript
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
-import { authClient } from '~/clients/auth';
+import { client } from '~/internal-api/<provider>';
 
-export const loginFn = createServerFn({ method: 'POST' })
-  .inputValidator(z.object({ email: z.string().email() }))
+export const fetchResourceFn = createServerFn({ method: 'GET' })
+  .inputValidator(z.object({ id: z.string() }))
   .handler(async ({ data }) => {
-    // Call auth internal API from server function
-    const user = await authClient.user.get({ id: 'user-123' });
-
-    return {
-      success: true,
-      user,
-    };
+    const resource = await client.resource.get({ id: data.id });
+    return { resource };
   });
 ```
 
@@ -167,18 +169,154 @@ Key points:
 ### Calling Server Functions from Components
 
 ```typescript
-import { loginFn } from '~/server/auth';
+import { fetchResourceFn } from '~/server/resource';
 
-function LoginPage() {
-  const handleSubmit = async (email: string) => {
-    const result = await loginFn({ data: { email } });
-    if (result.success) {
-      // Handle successful login
-    }
+function ResourcePage({ id }: { id: string }) {
+  const handleFetch = async () => {
+    const result = await fetchResourceFn({ data: { id } });
+    // Handle result
   };
   // ...
 }
 ```
+
+## Infrastructure
+
+Internal APIs share a single HTTP API Gateway deployed by `shared-infra`. Each service adds routes under a service-specific prefix with **IAM authorization**.
+
+### Shared API Gateway
+
+```
+shared-infra (deploys first)
+├── Creates HTTP API Gateway (v2)
+├── Configures access logging
+└── Publishes to SSM:
+    ├── shared-infra/internal-api-url
+    └── shared-infra/internal-api-id
+
+<service> (deploys after shared-infra)
+├── Imports HTTP API via serviceConfig.getParameterValue()
+├── Adds routes with IAM authorization
+└── Routes: ANY /<service>/{proxy+} → Lambda handler
+```
+
+### Adding Routes
+
+Services import the shared HTTP API and add routes:
+
+```typescript
+// services/<service>/infra/Main.ts
+import { Api, StackContext } from 'sst/constructs';
+import { HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
+import { serviceConfig } from '@lib/sst-helpers';
+
+export function Main(context: StackContext) {
+  const { stack } = context;
+
+  const internalApiId = serviceConfig.getParameterValue(context, {
+    path: 'shared-infra/internal-api-id',
+  });
+
+  const importedHttpApi = HttpApi.fromHttpApiAttributes(
+    stack,
+    'imported-internal-api',
+    { httpApiId: internalApiId }
+  );
+
+  new Api(stack, 'internal-api-routes', {
+    cdk: { httpApi: importedHttpApi },
+    defaults: { authorizer: 'iam' },
+    routes: {
+      'ANY /<service>/{proxy+}': {
+        function: {
+          handler: 'functions/src/internal-api/handler.handler',
+          runtime: 'nodejs22.x',
+        },
+      },
+    },
+  });
+}
+```
+
+### Route Prefix Convention
+
+Each service uses its name as a route prefix to avoid conflicts:
+
+| Service | Route Prefix | Example Endpoint    |
+| ------- | ------------ | ------------------- |
+| auth    | `/auth`      | `/auth/users/{id}`  |
+| billing | `/billing`   | `/billing/invoices` |
+| notify  | `/notify`    | `/notify/send`      |
+
+### IAM Authentication
+
+Internal API routes use AWS IAM authorization for service-to-service authentication:
+
+- **Security**: Only AWS resources with proper IAM permissions can invoke APIs
+- **No tokens**: Requests are signed with AWS Signature V4 automatically
+- **Fine-grained access**: Control access via IAM policies
+
+**Granting access to a consumer:**
+
+```typescript
+// In consumer service infrastructure
+myFunction.attachPermissions([
+  new PolicyStatement({
+    actions: ['execute-api:Invoke'],
+    resources: [
+      `arn:aws:execute-api:${stack.region}:${stack.account}:${internalApiId}/*`,
+    ],
+  }),
+]);
+```
+
+**Signing requests (non-Lambda consumers):**
+
+```typescript
+import { SignatureV4 } from '@aws-sdk/signature-v4';
+import { Sha256 } from '@aws-crypto/sha256-js';
+
+const signer = new SignatureV4({
+  service: 'execute-api',
+  region: process.env.AWS_REGION,
+  credentials: fromEnv(),
+  sha256: Sha256,
+});
+```
+
+### Cross-Service Discovery
+
+The `shared-infra` service publishes API configuration to SSM:
+
+- `shared-infra/internal-api-url` - API Gateway endpoint URL
+- `shared-infra/internal-api-id` - API Gateway ID (for importing)
+
+See `docs/iac-patterns.md` for details on cross-service configuration.
+
+### Deployment Order
+
+Services must declare dependencies on `shared-infra` in their `package.json`:
+
+```json
+{
+  "name": "@infra/my-service",
+  "dependencies": {
+    "@infra/shared-infra": "workspace:*"
+  }
+}
+```
+
+This ensures Turborepo deploys `shared-infra` (which creates the API Gateway) before services that add routes to it.
+
+**How it works:**
+
+1. Service declares `"@infra/shared-infra": "workspace:*"` in dependencies
+2. Turborepo sees this and deploys `shared-infra` first
+3. `shared-infra` creates API Gateway and writes ID/URL to SSM
+4. Consumer service deploys and reads SSM parameters via `serviceConfig`
+5. CloudFormation resolves SSM values at deploy time
+
+**Validation:** The `serviceConfig.getParameterValue()` function validates this dependency exists and throws an error if missing. See `docs/iac-patterns.md` for details.
 
 ## Testing
 
@@ -189,13 +327,13 @@ import { describe, it, expect } from 'vitest';
 import { call } from '@orpc/server';
 import { router } from './router.js';
 
-describe('user.get', () => {
-  it('should return user info', async () => {
-    const result = await call(router.user.get, { id: 'test-123' });
+describe('resource.get', () => {
+  it('should return resource', async () => {
+    const result = await call(router.resource.get, { id: 'test-123' });
 
     expect(result).toMatchObject({
       id: 'test-123',
-      email: expect.any(String),
+      name: expect.any(String),
     });
   });
 });
@@ -203,50 +341,14 @@ describe('user.get', () => {
 
 ### Mocking for Tests
 
-Use `implement` to create mock versions of procedures for testing:
-
 ```typescript
 import { implement } from '@orpc/server';
 
-// Create a mock implementation for testing
-const mockGetUser = implement(contract.user.get).handler(() => ({
+const mockGetResource = implement(contract.resource.get).handler(() => ({
   id: 'mock-id',
-  email: 'mock@example.com',
+  name: 'Mock Resource',
 }));
 ```
-
-## OpenAPI Specification
-
-### Auto-generated Spec
-
-The API automatically generates an OpenAPI 3.1.1 specification:
-
-```typescript
-import { OpenAPIGenerator } from '@orpc/openapi';
-import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
-
-const generator = new OpenAPIGenerator({
-  schemaConverters: [new ZodToJsonSchemaConverter()],
-});
-
-const spec = await generator.generate(router, {
-  info: { title: 'Auth API', version: '1.0.0' },
-});
-```
-
-### Scalar API Reference
-
-The handler includes a Scalar API reference UI at the root path for development.
-
-## Infrastructure
-
-Internal APIs are deployed as AWS Lambda functions behind API Gateway:
-
-- **API Gateway**: REST API (v1) managed by SST
-- **Lambda**: ESM modules with 30-second timeout
-- **CORS**: Enabled for all origins
-
-See `infra/api/InternalApi.ts` in each service for configuration.
 
 ## Error Handling
 
@@ -255,33 +357,31 @@ Use `ORPCError` for structured error responses:
 ```typescript
 import { ORPCError } from '@orpc/server';
 
-const getUser = implement(contract.user.get).handler(async ({ input }) => {
-  const user = await findUser(input.id);
-  if (!user) {
-    throw new ORPCError('NOT_FOUND', { message: 'User not found' });
+const getResource = implement(contract.resource.get).handler(
+  async ({ input }) => {
+    const resource = await findResource(input.id);
+    if (!resource) {
+      throw new ORPCError('NOT_FOUND', { message: 'Resource not found' });
+    }
+    return resource;
   }
-  return user;
-});
+);
 ```
 
 ### Type-Safe Errors
 
-For fully type-safe error handling, define errors using `.errors`:
-
 ```typescript
 const base = os.errors({
-  NOT_FOUND: {
-    message: 'Resource not found',
-  },
+  NOT_FOUND: { message: 'Resource not found' },
   UNAUTHORIZED: {},
 });
 
-const getUser = base.handler(async ({ input, errors }) => {
-  const user = await findUser(input.id);
-  if (!user) {
+const getResource = base.handler(async ({ input, errors }) => {
+  const resource = await findResource(input.id);
+  if (!resource) {
     throw errors.NOT_FOUND();
   }
-  return user;
+  return resource;
 });
 ```
 
@@ -291,82 +391,41 @@ const getUser = base.handler(async ({ input, errors }) => {
 
 ### Monorepo Structure
 
-This project follows the recommended ORPC monorepo structure:
-
 ```
 packages/
 ├─ contract-internal-api/  # Define contracts with @orpc/contract
 services/
-├─ auth/                   # Implement contracts with @orpc/server
-├─ main-ui/                # Consume via @orpc/client in server functions
+├─ <provider>/             # Implement contracts with @orpc/server
+├─ <consumer>/             # Consume via @orpc/client
 │   └─ app/src/
-│       ├─ clients/        # ORPC clients for internal APIs
-│       └─ server/         # TanStack Start server functions
+│       ├─ internal-api/   # ORPC clients
+│       └─ server/         # Server functions
 ```
 
-Key principles:
+### Key Principles
 
 - **Contracts in packages**: Enable `composite: true` in `tsconfig.json`
 - **Services reference contracts**: Add `references` to contract packages
 - **Use workspace packages**: Prefer `workspace:*` over relative imports
-- **Server functions for API calls**: Use TanStack Start server functions to call internal APIs from the frontend
-
-### Dedupe Middleware
-
-When procedures call other procedures or middleware is applied multiple times, use context to prevent redundant execution:
-
-```typescript
-const dbProvider = os
-  .$context<{ db?: Database }>()
-  .middleware(async ({ context, next }) => {
-    // Skip if db already exists in context
-    const db = context.db ?? (await connectDb());
-    return next({ context: { db } });
-  });
-```
+- **Server functions for API calls**: Call internal APIs from server functions
 
 ### Error Handling Guidelines
 
-1. **Always throw Error instances** - Never throw literals:
-
-   ```typescript
-   // Good
-   throw new ORPCError('NOT_FOUND', { message: 'User not found' });
-
-   // Bad
-   throw 'User not found';
-   ```
-
-2. **Use specific error codes** - ORPC provides standard codes like `NOT_FOUND`, `UNAUTHORIZED`, `BAD_REQUEST`, `INTERNAL_SERVER_ERROR`
-
+1. **Always throw Error instances** - Never throw literals
+2. **Use specific error codes** - `NOT_FOUND`, `UNAUTHORIZED`, `BAD_REQUEST`, etc.
 3. **No sensitive data in errors** - Error data is sent to clients
-
-### TypeScript Configuration
-
-For proper type inference across packages, ensure:
-
-1. Contract packages have `composite: true` in `tsconfig.json`
-2. Consumer packages reference contract packages:
-   ```json
-   {
-     "references": [{ "path": "../packages/contract-internal-api" }]
-   }
-   ```
 
 ## Development Commands
 
 ```bash
 # Run tests
-cd services/auth/functions
-pnpm test
+cd services/<service>/functions && pnpm test
 
 # Type check
-cd services/auth
-pnpm type-check
+cd services/<service> && pnpm type-check
 
 # Deploy
-cd services/auth
-pnpm run deploy -- --stage dev
+cd services/<service> && pnpm run deploy -- --stage dev
 ```
 
 ## Resources
@@ -375,4 +434,3 @@ pnpm run deploy -- --stage dev
 - [ORPC Contract-First](https://orpc.dev/docs/contract-first/define-contract)
 - [ORPC Best Practices](https://orpc.dev/docs/best-practices/monorepo-setup)
 - [ORPC Error Handling](https://orpc.dev/docs/error-handling)
-- [ORPC Testing & Mocking](https://orpc.dev/docs/advanced/testing-mocking)

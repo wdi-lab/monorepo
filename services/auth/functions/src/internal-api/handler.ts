@@ -20,7 +20,7 @@ const setupApp = () => {
 
   app.use('*', async (req, res, next) => {
     const { matched } = await openApiHandler.handle(req, res, {
-      prefix: '/',
+      prefix: '/auth',
       context: {},
     });
 

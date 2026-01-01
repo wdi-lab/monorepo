@@ -1,5 +1,5 @@
 {
-  "name": "@infra/auth",
+  "name": "@infra/shared-infra",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -14,8 +14,6 @@
     "test:run": "vitest run"
   },
   "dependencies": {
-    "@functions/auth": "workspace:*",
-    "@infra/shared-infra": "workspace:*",
     "@lib/sst-helpers": "workspace:*"
   },
   "devDependencies": {

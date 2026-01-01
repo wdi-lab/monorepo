@@ -202,6 +202,104 @@ pnpm run remove -- --stage <stage-name>
 - Standardized configuration across projects
 - Example: Site deployment constructs
 
+## Cross-Service Configuration
+
+Use the `serviceConfig` helper from `@lib/sst-helpers` to share configuration values between services via SSM parameters.
+
+### How It Works
+
+Services can publish configuration values (URLs, IDs, ARNs) to SSM parameters that other services read at deploy time. This enables loose coupling between services while maintaining type-safe references.
+
+**Producer Service**:
+
+1. Creates a resource (API, User Pool, etc.)
+2. Calls `createParameter()` with a typed path
+3. SSM parameter is created at `/service/<service>/<stage>/<key>`
+
+**Consumer Service**:
+
+1. Calls `getParameterValue()` with the same path
+2. CloudFormation resolves the SSM parameter at deploy time
+3. Value is available for Lambda environment variables, IAM policies, etc.
+
+### API
+
+| Function            | Purpose                                           |
+| ------------------- | ------------------------------------------------- |
+| `createParameter`   | Publishes a value to SSM                          |
+| `getParameterValue` | Reads a value from SSM (same region)              |
+| `getParameterArn`   | Gets ARN for IAM policies (supports cross-region) |
+
+### Options
+
+All functions accept either format:
+
+- **Path**: `{ path: '<service>/<key>' }`
+- **Service/key**: `{ service: '<service>', key: '<key>' }`
+
+### SSM Parameter Format
+
+`/service/<service-name>/<stage>/<resource-key>`
+
+Available paths are defined in `packages/sst-helpers/src/serviceConfig.ts` with full TypeScript autocompletion.
+
+## Service Dependencies
+
+When a service consumes configuration from another service via `serviceConfig`, you must declare an explicit dependency in `package.json`. This ensures Turborepo deploys services in the correct order.
+
+### Why Dependencies Are Required
+
+1. **Deployment ordering**: Turborepo uses `package.json` dependencies to build a dependency graph
+2. **SSM parameters must exist**: The provider service creates SSM parameters; the consumer reads them
+3. **Runtime validation**: `serviceConfig` getters validate the dependency exists and throw an error if missing
+
+### Declaring Dependencies
+
+Add the provider service to your `package.json` dependencies:
+
+```json
+{
+  "name": "@infra/my-service",
+  "dependencies": {
+    "@infra/shared-infra": "workspace:*",
+    "@lib/sst-helpers": "workspace:*"
+  }
+}
+```
+
+The naming convention is `@infra/<service-name>` where `<service-name>` matches the directory name in `services/`.
+
+### Example: Auth Service Depending on Shared Infrastructure
+
+```
+services/auth/package.json
+├── dependencies:
+│   └── "@infra/shared-infra": "workspace:*"  ← Declares dependency
+│
+services/auth/infra/Main.ts
+└── serviceConfig.getParameterValue(ctx, {
+      path: 'shared-infra/internal-api-id'    ← Reads from shared-infra
+    })
+```
+
+When deploying:
+
+```bash
+pnpm deploy --filter=@infra/auth -- --stage dev
+```
+
+Turborepo automatically deploys `shared-infra` first because `auth` depends on it.
+
+### Validation
+
+The `getParameterValue` and `getParameterArn` functions validate that the required dependency exists. If missing, deployment fails with a clear error:
+
+```
+Missing service dependency: This service uses serviceConfig to read from 'shared-infra',
+but '@infra/shared-infra' is not listed in package.json dependencies.
+Add "@infra/shared-infra": "workspace:*" to ensure correct deployment order.
+```
+
 ## Common Pitfalls to Avoid
 
 - Don't create subdirectories for simple resources

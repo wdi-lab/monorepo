@@ -7,10 +7,10 @@ export default defineConfig({
     fileParallelism: false,
     hookTimeout: 30000,
     testTimeout: 30000,
-    include: ['**/*.{test,spec}.{ts,tsx}'],
+    include: ['infra/**/*.{test,spec}.{ts,tsx}'],
     env: {
       SST_STAGE: 'test',
-      SST_APP: 'test-app',
+      SST_APP: 'shared-infra',
     },
     coverage: {
       provider: 'v8',
