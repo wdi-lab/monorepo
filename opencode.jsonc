@@ -21,4 +21,12 @@
       "enabled": true,
     },
   },
+  "permission": {
+    "bash": {
+      "git status": "allow",
+      "git diff": "allow",
+      "git *": "ask",
+      "*": "allow",
+    },
+  },
 }
