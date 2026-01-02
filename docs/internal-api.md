@@ -124,25 +124,64 @@ app.use('*', async (req, res, next) => {
 
 ### Creating a Client
 
-Create a type-safe client using `@orpc/client` with `OpenAPILink`:
+Use the `@client/internal-api` package to create a type-safe client with automatic AWS Signature V4 signing:
 
 ```typescript
 // services/<consumer>/app/src/internal-api/<provider>.ts
-import type { ContractRouterClient } from '@orpc/contract';
-import type { JsonifiedClient } from '@orpc/openapi-client';
-import { createORPCClient } from '@orpc/client';
-import { OpenAPILink } from '@orpc/openapi-client/fetch';
+import { createInternalApiClient } from '@client/internal-api';
 import { contract } from '@contract/internal-api/<provider>';
 
-const link = new OpenAPILink(contract, {
-  url: process.env.INTERNAL_API_URL,
-  headers: () => ({
-    'Content-Type': 'application/json',
-  }),
+export const client = createInternalApiClient({
+  contract,
+  baseUrl: process.env.INTERNAL_API_URL!,
+  // AWS Signature V4 signing is enabled by default
+  // Automatically detects region and service from URL
+  // Uses default AWS credential provider chain
+});
+```
+
+**Features:**
+
+- ✅ Automatic AWS Signature V4 request signing
+- ✅ Auto-detects region from API Gateway URLs (`*.execute-api.{region}.amazonaws.com`)
+- ✅ Auto-detects service name (`execute-api` or `lambda`)
+- ✅ Uses default credential provider chain (Lambda role, EC2, env vars, ~/.aws)
+- ✅ Full type safety via ORPC contracts
+
+**Custom options:**
+
+```typescript
+import { createInternalApiClient } from '@client/internal-api';
+
+// Custom headers
+const client = createInternalApiClient({
+  contract,
+  baseUrl: process.env.INTERNAL_API_URL!,
+  headers: {
+    'X-Custom-Header': 'value',
+  },
 });
 
-export const client: JsonifiedClient<ContractRouterClient<typeof contract>> =
-  createORPCClient(link);
+// Disable signing for local development
+const localClient = createInternalApiClient({
+  contract,
+  baseUrl: 'http://localhost:3001',
+  awsSignatureV4: false,
+});
+
+// Custom AWS signing options
+const customClient = createInternalApiClient({
+  contract,
+  baseUrl: process.env.INTERNAL_API_URL!,
+  awsSignatureV4: {
+    region: 'us-west-2',
+    service: 'execute-api',
+    credentials: {
+      accessKeyId: '...',
+      secretAccessKey: '...',
+    },
+  },
+});
 ```
 
 ### Using Client in TanStack Start Server Functions
@@ -430,7 +469,7 @@ cd services/<service> && pnpm run deploy -- --stage dev
 
 ### Local Development with AWS Credentials
 
-When running services locally that consume internal APIs, you need AWS credentials for request signing. The `@client/internal-api` package uses AWS Signature V4 to authenticate requests.
+When running services locally that consume internal APIs, you need AWS credentials for request signing. The `@client/internal-api` package automatically handles AWS Signature V4 authentication.
 
 **Using aws-vault (recommended):**
 
@@ -443,17 +482,23 @@ aws-vault exec <profile> -- pnpm dev
 **Using environment variables:**
 
 ```bash
-AWS_ACCESS_KEY_ID=xxx AWS_SECRET_ACCESS_KEY=xxx AWS_REGION=us-east-1 pnpm dev
+export AWS_ACCESS_KEY_ID=xxx
+export AWS_SECRET_ACCESS_KEY=xxx
+export AWS_REGION=us-east-1
+pnpm dev
 ```
 
-**Auto-detection features:**
+**What happens automatically:**
 
-The internal API client automatically:
+The `@client/internal-api` package:
 
-- Detects region from API Gateway URLs (`*.execute-api.{region}.amazonaws.com`)
-- Detects region from Lambda Function URLs (`*.lambda-url.{region}.on.aws`)
-- Detects service name (`execute-api` or `lambda`) for correct signing
-- Uses the default AWS credential provider chain
+1. ✅ Detects region from API Gateway URLs (`*.execute-api.{region}.amazonaws.com`)
+2. ✅ Detects region from Lambda Function URLs (`*.lambda-url.{region}.on.aws`)
+3. ✅ Detects service name (`execute-api` or `lambda`) for correct signing
+4. ✅ Uses the default AWS credential provider chain (Lambda role → EC2 instance profile → env vars → `~/.aws/credentials`)
+5. ✅ Signs all requests with AWS Signature V4
+
+**No configuration needed** - it just works!
 
 **Disabling signing (for local mocks):**
 
@@ -463,7 +508,7 @@ import { createInternalApiClient } from '@client/internal-api';
 const client = createInternalApiClient({
   contract,
   baseUrl: 'http://localhost:3001',
-  awsSignatureV4: false, // Disable signing for local development
+  awsSignatureV4: false, // Disable signing for local mock servers
 });
 ```
 
