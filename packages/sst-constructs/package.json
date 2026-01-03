@@ -9,7 +9,8 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./node/*": "./dist/node/*/index.js"
   },
   "files": [
     "dist"
@@ -22,16 +23,19 @@
     "test:run": "vitest run"
   },
   "dependencies": {
+    "@aws-sdk/client-ssm": "catalog:",
+    "@lib/sst-helpers": "workspace:*",
     "cross-spawn": "^7.0.6",
     "esbuild": "^0.27.2",
     "glob": "^13.0.0"
   },
   "devDependencies": {
+    "@config/eslint": "workspace:*",
+    "@config/tsconfig": "workspace:*",
     "@types/cross-spawn": "^6.0.6",
     "@types/node": "catalog:",
     "aws-cdk-lib": "catalog:",
-    "@config/eslint": "workspace:*",
-    "@config/tsconfig": "workspace:*",
+    "aws-sdk-client-mock": "catalog:",
     "constructs": "catalog:",
     "eslint": "catalog:",
     "sst": "catalog:",

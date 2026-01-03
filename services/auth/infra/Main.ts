@@ -72,6 +72,13 @@ export function Main(context: StackContext) {
     },
   });
 
+  // Publish the auth internal API URL for consuming services
+  serviceConfig.createParameter(context, {
+    service: 'auth',
+    key: 'internal-api-url',
+    value: internalApi.url + '/auth',
+  });
+
   stack.addOutputs({
     InternalApiUrl: internalApi.url + '/auth',
     UserPoolId: mainUserPool.userPool.userPoolId,

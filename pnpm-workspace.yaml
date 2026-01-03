@@ -9,9 +9,9 @@ catalog:
   '@aws-sdk/client-dynamodb': ^3.895.0
   '@aws-sdk/client-kms': ^3.895.0
   '@aws-sdk/client-ses': ^3.895.0
+  '@aws-sdk/client-ssm': 3.962.0
   '@aws-sdk/credential-provider-node': ^3.895.0
   '@aws-sdk/lib-dynamodb': ^3.895.0
-  'aws-sdk-client-mock': ^4.1.0
   '@orpc/client': ^1.13.2
   '@orpc/contract': ^1.13.2
   '@orpc/openapi': ^1.13.2
@@ -28,6 +28,7 @@ catalog:
   '@vitest/browser-playwright': ^4.0.16
   '@vitest/coverage-v8': ^4.0.16
   aws-cdk-lib: 2.233.0
+  aws-sdk-client-mock: 4.1.0
   constructs: 10.3.0
   eslint: ^9.39.2
   playwright: ^1.57.0

@@ -32,13 +32,53 @@ services/main-ui/
 └── package.json
 ```
 
+## Authentication Architecture
+
+The main-ui service **does NOT have direct access to Cognito**. All authentication operations go through the auth service's internal API:
+
+```
+┌─────────────┐
+│  main-ui    │
+│  (browser)  │
+└──────┬──────┘
+       │
+       │ 1. User submits email
+       ▼
+┌─────────────────────┐
+│  main-ui            │
+│  (server function)  │
+└──────┬──────────────┘
+       │
+       │ 2. IAM-signed request
+       ▼
+┌─────────────────────┐
+│  auth service       │
+│  (internal API)     │
+└──────┬──────────────┘
+       │
+       │ 3. Cognito operations
+       ▼
+┌─────────────────────┐
+│  AWS Cognito        │
+└─────────────────────┘
+```
+
+**Key points:**
+
+- main-ui only calls the auth service's internal API endpoints
+- Auth service acts as a proxy and handles all Cognito interactions
+- Server functions in main-ui sign requests with IAM credentials
+- No Cognito credentials or SDKs in main-ui
+
 ## Routes
 
-| Route    | Description          |
-| -------- | -------------------- |
-| `/`      | Home page            |
-| `/about` | About page           |
-| `/login` | Login page with form |
+| Route                | Description                     |
+| -------------------- | ------------------------------- |
+| `/`                  | Home page                       |
+| `/about`             | About page                      |
+| `/login`             | Login page with magic link form |
+| `/login/check-email` | Email confirmation page         |
+| `/auth/callback`     | Magic link callback handler     |
 
 ## Server Functions
 

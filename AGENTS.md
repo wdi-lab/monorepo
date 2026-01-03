@@ -13,16 +13,15 @@
 
 ## Code Style
 
-- **Imports**: Use `@lib/ui` package for ALL Chakra UI components (never import from @chakra-ui directly), `workspace:*` for internal deps, `catalog:` for shared versions (react, typescript, zod, vitest, @testing-library/\*, @types/node, @types/aws-lambda). Import from `@lib/sst-constructs` for shared SST constructs (SsrSite, NitroSite).
+- **Imports**: Use `@lib/ui` package for ALL Chakra UI components (never import from @chakra-ui directly), `workspace:*` for internal deps, `catalog:` for shared versions (react, typescript, zod, vitest, @testing-library/\*, @types/node, @types/aws-lambda). Import from `@lib/sst-constructs` for shared SST/infrastructure constructs (e.g: NitroSite, ServiceConfig), and `@lib/sst-constructs/node` for Node.js-specific code often used in Lambda function.
 - **Formatting**: Prettier enforced (single quotes, semicolons, 2-space indentation, 80 char printWidth, ES5 trailing commas)
 - **Types**: Strict TypeScript with `strict: true`, `strictNullChecks: true`, no `any` (ESLint error), use Zod v4 for runtime validation
 - **Naming**: PascalCase for components/types, camelCase for functions/variables, file-based routing for TanStack Router (`index.tsx`, `about.tsx` in `routes/`)
 - **Components**: Use Chakra UI v3 composition pattern (`Component.Root`, `Component.Body`, etc.), all Chakra exports via `packages/ui/src/chakra.tsx`
-- **Testing**: Use Vitest with jsdom, custom render function from `~/test/test-utils.tsx` wraps components in ChakraProvider, mock TanStack Router with `createRouter`/`createRoute` helpers
+- **Testing**: Use Vitest with jsdom, custom render function from `~/test/test-utils.tsx` wraps components in ChakraProvider, mock TanStack Router with `createRouter`/`createRoute` helpers. For infrastructure/SST/CDK tests, refer to `docs/iac-testing.md` for comprehensive testing patterns and best practices.
 - **Error Handling**: ESLint warns on console (except console.warn/error), React 19 JSX transform (no React import needed)
 - **File Structure**: `services/` for apps, `packages/` for shared libs, `~/*` alias maps to `src/` in services. Service source code in `./app` or `./functions` subdirs, infrastructure code (SST, infra/) at service root
 - **ESLint Configs**: Use `@config/eslint/tanstack` for TanStack Start apps, `@config/eslint/node` for Node.js services (like main-api), `@config/eslint/react` for React libraries
-- **SST Constructs**: Shared in `@lib/sst-constructs` (packages/sst-constructs), built with tsup to ESM. Use `createRequire(import.meta.url)` for CommonJS interop, not bare `require`.
 
 ## Project Context
 

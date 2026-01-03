@@ -21,7 +21,7 @@ export interface CreateInternalApiClientOptions<
   /**
    * Base URL for the internal API.
    */
-  baseUrl: string | (() => string);
+  baseUrl: string | (() => string) | (() => Promise<string>);
 
   /**
    * Custom headers to include in requests.

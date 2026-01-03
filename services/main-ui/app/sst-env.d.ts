@@ -9,3 +9,11 @@ declare module 'sst/node/site' {
 
   export const NitroSite: NitroSiteResources;
 }
+
+declare module 'sst/node/config' {
+  export interface ServiceConfigResources {
+    AuthInternalApiUrl: {
+      value: string;
+    };
+  }
+}

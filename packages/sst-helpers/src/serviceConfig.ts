@@ -63,7 +63,7 @@ type CreateParameterOptions<S extends ServiceNameValue = ServiceNameValue> =
   BaseOptions & { value: string } & (ServiceKeyIdentifier<S> | PathIdentifier);
 
 type GetParameterOptions<S extends ServiceNameValue = ServiceNameValue> =
-  BaseOptions & { region?: string } & (
+  BaseOptions & { region?: string; validateDependency?: boolean } & (
       | ServiceKeyIdentifier<S>
       | PathIdentifier
     );
@@ -154,8 +154,10 @@ export const getParameterValue = <S extends ServiceNameValue>(
   const { stack, app } = context;
   const { service, key } = resolveServiceKey(options);
 
-  // Validate service dependency
-  validateServiceDependency(service);
+  // Validate service dependency (default: true)
+  if (options.validateDependency !== false) {
+    validateServiceDependency(service);
+  }
 
   if (options.region) {
     throw new Error(
@@ -226,8 +228,10 @@ export const getParameterName = <S extends ServiceNameValue>(
   const { app } = context;
   const { service, key } = resolveServiceKey(options);
 
-  // Validate service dependency
-  validateServiceDependency(service);
+  // Validate service dependency (default: true)
+  if (options.validateDependency !== false) {
+    validateServiceDependency(service);
+  }
 
   return _internal_getParameterName(app.stage, service, key);
 };

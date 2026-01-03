@@ -69,25 +69,6 @@ describe('serviceConfig', () => {
       });
     });
 
-    it('should create SSM parameter for auth service with path', async () => {
-      const app = new App({ mode: 'deploy' });
-      const Stack = (ctx: StackContext) => {
-        createParameter(ctx, {
-          path: 'auth/user-pool-id',
-          value: 'us-west-2_abc123',
-        });
-      };
-      app.stack(Stack);
-      await app.finish();
-
-      const template = Template.fromStack(getStack(Stack));
-      template.hasResourceProperties('AWS::SSM::Parameter', {
-        Type: 'String',
-        Value: 'us-west-2_abc123',
-        Name: Match.stringLikeRegexp('/service/auth/.*/user-pool-id'),
-      });
-    });
-
     it('should generate unique construct IDs for different parameters', async () => {
       const app = new App({ mode: 'deploy' });
       const Stack = (ctx: StackContext) => {
@@ -168,7 +149,7 @@ describe('serviceConfig', () => {
       const Stack = (ctx: StackContext) => {
         expect(() =>
           getParameterValue(ctx, {
-            path: 'auth/user-pool-id',
+            path: 'shared-infra/internal-api-url',
             region: 'us-east-1',
           })
         ).toThrow(
@@ -219,7 +200,7 @@ describe('serviceConfig', () => {
       let arn: string;
       const Stack = (ctx: StackContext) => {
         arn = getParameterArn(ctx, {
-          path: 'auth/user-pool-id',
+          path: 'auth/internal-api-url',
           region: 'us-east-1',
         });
       };
@@ -228,7 +209,7 @@ describe('serviceConfig', () => {
 
       expect(arn!).toContain(':ssm:us-east-1:');
       expect(arn!).toContain(':parameter/service/auth/');
-      expect(arn!).toContain('/user-pool-id');
+      expect(arn!).toContain('/internal-api-url');
     });
   });
 
@@ -251,12 +232,12 @@ describe('serviceConfig', () => {
     it('should call validateServiceDependency with correct service for getParameterArn', async () => {
       const app = new App({ mode: 'deploy' });
       const Stack = (ctx: StackContext) => {
-        getParameterArn(ctx, { path: 'auth/user-pool-id' });
+        getParameterArn(ctx, { path: 'shared-infra/internal-api-url' });
       };
       app.stack(Stack);
       await app.finish();
 
-      expect(validateServiceDependency).toHaveBeenCalledWith('auth');
+      expect(validateServiceDependency).toHaveBeenCalledWith('shared-infra');
     });
 
     it('should propagate error from validateServiceDependency in getParameterValue', async () => {
@@ -282,24 +263,105 @@ describe('serviceConfig', () => {
       const app = new App({ mode: 'deploy' });
       const Stack = (ctx: StackContext) => {
         expect(() =>
-          getParameterArn(ctx, { path: 'auth/user-pool-id' })
+          getParameterArn(ctx, { path: 'shared-infra/internal-api-url' })
         ).toThrow('Missing service dependency');
       };
       app.stack(Stack);
       await app.finish();
     });
-  });
 
-  describe('ServicePath type', () => {
-    it('should allow valid paths', () => {
-      // Type check - these should compile without errors
-      const paths: ServicePath[] = [
-        'shared-infra/internal-api-url',
-        'shared-infra/internal-api-id',
-        'auth/user-pool-id',
-        'auth/user-pool-client-id',
-      ];
-      expect(paths).toHaveLength(4);
+    describe('validateDependency option', () => {
+      beforeEach(() => {
+        vi.mocked(validateServiceDependency).mockReset();
+      });
+
+      it('should skip validation when validateDependency is false in getParameterValue', async () => {
+        const app = new App({ mode: 'deploy' });
+        const Stack = (ctx: StackContext) => {
+          getParameterValue(ctx, {
+            path: 'shared-infra/internal-api-url',
+            validateDependency: false,
+          });
+        };
+        app.stack(Stack);
+        await app.finish();
+
+        expect(validateServiceDependency).not.toHaveBeenCalled();
+      });
+
+      it('should skip validation when validateDependency is false in getParameterName', () => {
+        const app = new App({ mode: 'deploy' });
+        const stack = new Stack(app, 'test-stack');
+        const ctx = { stack, app };
+
+        getParameterName(ctx, {
+          path: 'shared-infra/internal-api-url',
+          validateDependency: false,
+        });
+
+        expect(validateServiceDependency).not.toHaveBeenCalled();
+      });
+
+      it('should skip validation when validateDependency is false in getParameterArn', async () => {
+        const app = new App({ mode: 'deploy' });
+        const Stack = (ctx: StackContext) => {
+          getParameterArn(ctx, {
+            path: 'shared-infra/internal-api-url',
+            validateDependency: false,
+          });
+        };
+        app.stack(Stack);
+        await app.finish();
+
+        expect(validateServiceDependency).not.toHaveBeenCalled();
+      });
+
+      it('should validate when validateDependency is explicitly true in getParameterValue', async () => {
+        const app = new App({ mode: 'deploy' });
+        const Stack = (ctx: StackContext) => {
+          getParameterValue(ctx, {
+            path: 'shared-infra/internal-api-url',
+            validateDependency: true,
+          });
+        };
+        app.stack(Stack);
+        await app.finish();
+
+        expect(validateServiceDependency).toHaveBeenCalledWith('shared-infra');
+      });
+
+      it('should validate when validateDependency is explicitly true in getParameterName', () => {
+        const app = new App({ mode: 'deploy' });
+        const stack = new Stack(app, 'test-stack');
+        const ctx = { stack, app };
+
+        getParameterName(ctx, {
+          path: 'shared-infra/internal-api-url',
+          validateDependency: true,
+        });
+
+        expect(validateServiceDependency).toHaveBeenCalledWith('shared-infra');
+      });
+
+      it('should not throw when validation is disabled even if dependency is missing', async () => {
+        vi.mocked(validateServiceDependency).mockImplementation(() => {
+          throw new Error('Missing service dependency');
+        });
+
+        const app = new App({ mode: 'deploy' });
+        const Stack = (ctx: StackContext) => {
+          expect(() =>
+            getParameterValue(ctx, {
+              path: 'shared-infra/internal-api-url',
+              validateDependency: false,
+            })
+          ).not.toThrow();
+        };
+        app.stack(Stack);
+        await app.finish();
+
+        expect(validateServiceDependency).not.toHaveBeenCalled();
+      });
     });
   });
 
@@ -366,6 +428,7 @@ describe('serviceConfig', () => {
 
       expect(() =>
         getParameterName(ctx, {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           path: 'shared-infra/internal-api-url' as any, // Use valid path but mock validation to fail
         })
       ).toThrow('Missing service dependency');

@@ -10,6 +10,9 @@ coverage
 .sst
 .sst*
 
+# CDK
+cdk.context.json
+
 # Turbo
 .turbo
 

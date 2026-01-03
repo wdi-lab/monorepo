@@ -5,15 +5,17 @@ import { initProject } from 'sst/project.js';
 import { App, getStack, StackContext } from 'sst/constructs';
 import { Main } from './Main.ts';
 
-// Mock @lib/sst-helpers to avoid account validation in tests
-vi.mock('@lib/sst-helpers', () => ({
-  removalPolicy: {
-    retainForPermanentStage: () => RemovalPolicy.DESTROY,
-  },
-  serviceConfig: {
-    getParameterValue: () => 'mock-api-id',
-  },
-}));
+// Mock only removalPolicy to avoid account validation in tests
+// serviceConfig uses actual implementation
+vi.mock('@lib/sst-helpers', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@lib/sst-helpers')>();
+  return {
+    ...actual,
+    removalPolicy: {
+      retainForPermanentStage: () => RemovalPolicy.DESTROY,
+    },
+  };
+});
 
 describe('Main stack', () => {
   beforeAll(async () => {
@@ -21,7 +23,7 @@ describe('Main stack', () => {
   });
 
   it('should create UserPool, Cognito triggers, and internal API routes', async () => {
-    const app = new App({ mode: 'deploy' });
+    const app = new App({ mode: 'deploy', stage: 'test' });
     const Stack = (ctx: StackContext) => Main(ctx);
     app.stack(Stack);
 
@@ -59,5 +61,11 @@ describe('Main stack', () => {
 
     // Stack outputs
     template.hasOutput('UserPoolId', {});
+
+    // SSM Parameter for auth internal API URL (created by actual implementation)
+    template.hasResourceProperties('AWS::SSM::Parameter', {
+      Type: 'String',
+      Name: '/service/auth/test/internal-api-url',
+    });
   });
 });

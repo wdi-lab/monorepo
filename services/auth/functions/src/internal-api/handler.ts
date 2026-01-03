@@ -15,10 +15,29 @@ const openApiHandler = new OpenAPIHandler(router, {
 
 let serverlessExpressInstance: ReturnType<typeof serverlessExpress>;
 
+const parseJSON = (text: Buffer | null | undefined): unknown => {
+  const asString = text?.toString().trim();
+  if (!asString) {
+    return undefined;
+  }
+
+  return JSON.parse(asString);
+};
+
+const jsonBodyParser: express.RequestHandler = (req, _res, next) => {
+  if (
+    req.headers['content-type'] === 'application/json' ||
+    !req.headers['content-type']
+  ) {
+    req.body = parseJSON(req.body);
+  }
+  next();
+};
+
 const setupApp = () => {
   const app = express();
 
-  app.use('*', async (req, res, next) => {
+  app.use('*', jsonBodyParser, async (req, res, next) => {
     const { matched } = await openApiHandler.handle(req, res, {
       prefix: '/auth',
       context: {},

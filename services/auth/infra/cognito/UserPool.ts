@@ -14,6 +14,7 @@ export class UserPool extends Construct {
   app: App;
   stack: Stack;
   userPool!: cognito.UserPool;
+  clients: Map<string, cognito.UserPoolClient> = new Map();
 
   constructor(
     readonly scope: Construct,
@@ -59,7 +60,7 @@ export class UserPool extends Construct {
     if (!this.props.clients) return;
 
     Object.entries(this.props.clients).forEach(([clientId, clientProps]) => {
-      this.userPool.addClient(`UserPoolClient-${clientId}`, {
+      const client = this.userPool.addClient(`UserPoolClient-${clientId}`, {
         userPoolClientName: clientId,
         generateSecret: false,
         authFlows: {
@@ -72,6 +73,8 @@ export class UserPool extends Construct {
         preventUserExistenceErrors: true,
         ...clientProps,
       });
+
+      this.clients.set(clientId, client);
     });
   }
 }
