@@ -20,11 +20,18 @@ Monorepo for a full-stack application with:
 - **Lint**: `pnpm lint` (all) or `cd services/main-ui/app && pnpm lint` (single package)
 - **Type Check**: `pnpm type-check` (all) or `cd services/main-ui/app && pnpm type-check` (single)
 - **Format**: `pnpm format` (write), `pnpm format:check` (check only)
-- **Test**: `cd services/main-ui/app && pnpm test` (watch mode), `pnpm test:run` (single run), `vitest run src/path/to/file.test.tsx` (single file)
+- **Test**: `cd services/main-ui/app && pnpm test` (watch mode), `pnpm test:run` (single run), `vitest run src/path/to/file.test.tsx` (single file). **IMPORTANT**: When asked to write or run tests, always consult the relevant testing documentation first: `docs/iac-testing.md` for infrastructure/SST/CDK tests, or `docs/manual-testing.md` for browser/UI testing
 
 ## AWS Credentials
 
 For SST services requiring AWS credentials, the user may use aws-vault or other credential methods. Always ask which AWS profile/method to use before running commands that require credentials.
+
+## Additional Documentation
+
+- **[Manual Browser Testing](docs/manual-testing.md)**: Guide for using Playwright MCP tools for interactive browser testing
+- **[IAC Testing](docs/iac-testing.md)**: Infrastructure testing patterns and best practices for SST/CDK code
+- **[Auth Documentation](docs/auth.md)**: Authentication implementation details
+- **[IAC Patterns](docs/iac-patterns.md)**: Infrastructure as code patterns and conventions (CDK & SST v2)
 
 ## Code Style
 
