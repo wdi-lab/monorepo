@@ -610,6 +610,9 @@ importers:
       '@infra/auth':
         specifier: workspace:*
         version: link:../auth
+      '@infra/shared-infra':
+        specifier: workspace:*
+        version: link:../shared-infra
       '@lib/sst-constructs':
         specifier: workspace:*
         version: link:../../packages/sst-constructs
