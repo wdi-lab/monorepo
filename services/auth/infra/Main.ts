@@ -1,13 +1,28 @@
 import { Api, Config, StackContext } from 'sst/constructs';
 import { HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import { serviceConfig } from '@lib/sst-helpers';
+import * as kms from 'aws-cdk-lib/aws-kms';
+import { serviceConfig, envConfig } from '@lib/sst-helpers';
 import { UserPool } from './cognito/UserPool.ts';
 import { CognitoTriggers } from './cognito/CognitoTriggers.ts';
 import { MagicLink } from './cognito/MagicLink.ts';
 
 export function Main(context: StackContext) {
   const { stack, app } = context;
+
+  const authKmsKey = kms.Key.fromKeyArn(
+    stack,
+    'ImportedKmsKey',
+    envConfig.getValue(context, {
+      path: 'kms/key-arn',
+      id: 'auth',
+    })
+  );
+
+  const mainEmailDomain = envConfig.getValue(context, {
+    path: 'email-identity/name',
+    id: 'main',
+  });
 
   // Determine allowed origins based on stage
   const mainUiUrl =
@@ -50,9 +65,9 @@ export function Main(context: StackContext) {
   const magicLink = new MagicLink(stack, 'magic-link', {
     cognitoTriggers,
     allowedOrigins,
+    kmsKey: authKmsKey,
     ses: {
-      // TODO: Replace with your verified SES email address
-      fromAddress: 'noreply@example.com',
+      fromAddress: `noreply@${mainEmailDomain}`,
       // Optional: specify region if SES is in a different region
       // region: 'us-east-1',
     },
@@ -118,8 +133,7 @@ export function Main(context: StackContext) {
 
   // Publish the auth internal API URL for consuming services
   serviceConfig.createParameter(context, {
-    service: 'auth',
-    key: 'internal-api-url',
+    path: 'auth/internal-api-url',
     value: internalApi.url + '/auth',
   });
 
