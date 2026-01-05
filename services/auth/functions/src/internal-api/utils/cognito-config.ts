@@ -56,12 +56,6 @@ export async function getCognitoConfig(): Promise<CognitoConfig> {
   const userPoolId = Config.COGNITO_USER_POOL_ID;
   const clientId = Config.COGNITO_CLIENT_ID;
 
-  if (!userPoolId || !clientId) {
-    throw new Error(
-      'Missing required SST Config parameters: COGNITO_USER_POOL_ID or COGNITO_CLIENT_ID'
-    );
-  }
-
   const clientSecret = await getCognitoClientSecret(userPoolId, clientId);
 
   return {

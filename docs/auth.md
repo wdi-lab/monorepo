@@ -199,77 +199,15 @@ This ensures Turborepo deploys services in the correct order.
 
 ### Contract-First API Design
 
-The auth service uses **ORPC** (OpenAPI RPC) for type-safe service-to-service communication.
+The auth service uses **ORPC** for type-safe service-to-service communication following a contract-first approach:
 
-#### 1. Define Contract
+1. **Define Contract** - API schema in `@contract/internal-api/auth`
+2. **Implement Router** - Handler in `functions/src/internal-api/router.ts`
+3. **Consume via Client** - Type-safe client with AWS Sig V4 signing
 
-```typescript
-// packages/contract-internal-api/src/auth.ts
-import { oc } from '@orpc/contract';
-import * as z from 'zod';
-
-export const UserSchema = z.object({
-  id: z.string(),
-  email: z.string().email(),
-});
-
-export const getUser = oc
-  .route({ method: 'GET', path: '/users/{id}' })
-  .input(UserSchema.pick({ id: true }))
-  .output(UserSchema);
-
-export const contract = {
-  user: {
-    get: getUser,
-  },
-};
-```
-
-#### 2. Implement in Auth Service
-
-```typescript
-// services/auth/functions/src/internal-api/router.ts
-import { implement } from '@orpc/server';
-import { contract } from '@contract/internal-api/auth';
-
-const getUser = implement(contract.user.get).handler(async ({ input }) => {
-  // Fetch from Cognito
-  const user = await getUserFromCognito(input.id);
-  return user;
-});
-
-export const router = {
-  user: {
-    get: getUser,
-  },
-};
-```
-
-#### 3. Consume from Main-UI
-
-```typescript
-// services/main-ui/app/src/internal-api/auth.ts
-import { createInternalApiClient } from '@client/internal-api';
-import { contract } from '@contract/internal-api/auth';
-
-export const client = createInternalApiClient({
-  contract,
-  baseUrl: process.env.AUTH_INTERNAL_API_URL!,
-  // AWS Signature V4 signing is enabled by default
-  // Credentials are automatically loaded from environment
-});
-
-// Usage in server function
-import { createServerFn } from '@tanstack/react-start';
-import { client } from '~/internal-api/auth';
-
-export const getUserFn = createServerFn({ method: 'GET' })
-  .inputValidator(z.object({ id: z.string() }))
-  .handler(async ({ data }) => {
-    const user = await client.user.get({ id: data.id }); // ✅ Type-safe!
-    return { user };
-  });
-```
+> **Implementation details**: See [Internal API Documentation](./internal-api.md) for contracts, routers, and client patterns.
+>
+> **Auth-specific endpoints**: See [Auth Service README](../services/auth/README.md#api-endpoints) for endpoint details.
 
 ### IAM Authentication
 
@@ -280,125 +218,25 @@ Internal APIs use **AWS IAM authorization** for secure service-to-service commun
 - No API keys or tokens to manage
 - Fine-grained access control via IAM policies
 
-**The `@client/internal-api` package handles signing automatically:**
+The `@client/internal-api` package handles signing automatically with support for auto-detecting region and service from API Gateway URLs.
 
-```typescript
-import { createInternalApiClient } from '@client/internal-api';
-import { contract } from '@contract/internal-api/auth';
-
-// Signing is enabled by default
-const client = createInternalApiClient({
-  contract,
-  baseUrl: process.env.AUTH_INTERNAL_API_URL!,
-  // Automatically signs requests with AWS Signature V4
-  // Uses credentials from environment (Lambda role, EC2 instance profile, or local AWS credentials)
-});
-
-// Requests are automatically signed
-const user = await client.user.get({ id }); // ✅ Auto-signed!
-```
-
-**Features:**
-
-- ✅ **Auto-detects AWS region** from API Gateway URLs
-- ✅ **Auto-detects service name** (`execute-api` or `lambda`)
-- ✅ **Uses default credential provider chain** (Lambda role, EC2, env vars, ~/.aws)
-- ✅ **Type-safe** via ORPC contracts
-
-**For local development:**
-
-```bash
-# Use aws-vault to provide credentials
-aws-vault exec <profile> -- pnpm dev
-
-# Or export environment variables
-export AWS_ACCESS_KEY_ID=xxx
-export AWS_SECRET_ACCESS_KEY=xxx
-export AWS_REGION=us-east-1
-pnpm dev
-```
-
-**Disable signing for local mocks:**
-
-```typescript
-const client = createInternalApiClient({
-  contract,
-  baseUrl: 'http://localhost:3001',
-  awsSignatureV4: false, // Disable signing
-});
-```
-
-See [Internal API Documentation](./internal-api.md) for details.
+> **Details**: See [Internal API - IAM Authentication](./internal-api.md#iam-authentication)
+>
+> **Local development**: See [Internal API - Local Development](./internal-api.md#local-development-with-aws-credentials)
 
 ## Infrastructure Patterns
 
 ### Service Configuration (SSM Parameters)
 
-The auth service uses the `serviceConfig` helper to share its API URL with consumers:
+The auth service publishes its API URL via SSM for consumer services to discover:
 
-```typescript
-// services/auth/infra/Main.ts
-import { serviceConfig } from '@lib/sst-helpers';
+| Parameter Path                           | Value                            |
+| ---------------------------------------- | -------------------------------- |
+| `/service/auth/{stage}/internal-api-url` | Full API URL with `/auth` prefix |
 
-export function Main(context: StackContext) {
-  const { stack } = context;
+**Design principle**: Only the API URL is exposed - Cognito credentials are implementation details that stay within the auth service. This allows the auth service to change providers without breaking consumers.
 
-  // ... create resources ...
-
-  // Publish auth API URL for consumers
-  serviceConfig.createParameter(context, {
-    service: 'auth',
-    key: 'internal-api-url',
-    value: internalApi.url + '/auth',
-  });
-}
-```
-
-**SSM Parameter Path:**
-
-```
-/service/auth/<stage>/internal-api-url
-```
-
-**Consumers read the value:**
-
-```typescript
-// services/main-ui/infra/Main.ts
-const authInternalApiUrl = serviceConfig.getParameterValue(context, {
-  path: 'auth/internal-api-url',
-});
-
-// Pass to Nitro SSR server
-const mainSite = new NitroSite(stack, 'MainSite', {
-  environment: {
-    AUTH_INTERNAL_API_URL: authInternalApiUrl,
-  },
-});
-```
-
-### Shared Resources Definition
-
-Available service configs are defined in `packages/sst-helpers/src/serviceConfig.ts`:
-
-```typescript
-export const SharedResource = {
-  'shared-infra': {
-    INTERNAL_API_URL: 'internal-api-url',
-    INTERNAL_API_ID: 'internal-api-id',
-  },
-  auth: {
-    INTERNAL_API_URL: 'internal-api-url', // ✅ Only exposes API URL
-    // ❌ NOT exposing: USER_POOL_ID, CLIENT_ID, CLIENT_SECRET
-  },
-} as const satisfies Record<ServiceNameValue, Record<string, string>>;
-```
-
-**Why only expose API URL?**
-
-- Cognito credentials are implementation details
-- Consumers should not know about Cognito
-- Allows auth service to change providers without breaking consumers
-- Better security: secrets stay within auth service
+> **SSM patterns**: See [IAC Patterns - Cross-Service Configuration](./iac-patterns.md#cross-service-configuration)
 
 ### Modular Constructs
 
@@ -410,17 +248,12 @@ services/auth/infra/
 └── cognito/
     ├── UserPool.ts           # Cognito User Pool configuration
     ├── CognitoTriggers.ts    # Lambda triggers for custom auth flow
-    └── MagicLink.ts          # Magic Link specific resources (KMS, DynamoDB, SES)
+    └── MagicLink.ts          # Magic Link resources (KMS, DynamoDB, SES)
 ```
 
-**Benefits:**
-
-- Clear separation of concerns
-- Reusable components
-- Easier testing
-- Modular composition
-
-See [IAC Patterns Documentation](./iac-patterns.md) for details.
+> **Construct details**: See [Auth Service README](../services/auth/README.md#infrastructure-infra)
+>
+> **IAC patterns**: See [IAC Patterns - Modular Resource Organization](./iac-patterns.md#3-modular-resource-organization)
 
 ## Security Model
 
@@ -461,25 +294,7 @@ The auth service implements secure passwordless authentication using Magic Links
 - **Origin validation** - Only allowed origins can request magic links
 - **No user data in link** - Only cryptographic signature in URL
 
-### Magic Link URL Structure
-
-Magic links use hash fragments (not query parameters) to pass the secret:
-
-```
-https://app.example.com/auth/callback#<message.base64url>.<signature.base64url>
-```
-
-Where `message` contains:
-
-```json
-{
-  "userName": "user@example.com",
-  "iat": 1234567890,
-  "exp": 1234568790
-}
-```
-
-**Important**: The URL does not contain a session token. Sessions are managed by Cognito and must be stored separately (e.g., in cookies) for same-browser callback scenarios.
+> **URL Structure**: See [Auth Service README](../services/auth/README.md#url-structure) for technical details on hash fragments vs query parameters.
 
 ### Magic Link Callback Flow
 
@@ -561,26 +376,31 @@ sequenceDiagram
 
 ## Related Documentation
 
-### Core Documentation
+### Implementation Guide
 
+> **Start here for implementation**: [Auth Service README](../services/auth/README.md) - API endpoints, environment variables, URL structure, and configuration.
+
+### Architecture & Patterns
+
+- **[Magic Link Implementation](./magic-link-implementation.md)** - Code flow, key files, Cognito triggers, infrastructure constructs
 - **[Internal API](./internal-api.md)** - ORPC contract-first design, creating clients, IAM authentication
 - **[IAC Patterns](./iac-patterns.md)** - Service configuration, deployment order, SSM parameters
-- **[Auth Reference Architecture](./auth-reference-architecture.md)** - Detailed Cognito flows, Magic Link implementation, FIDO2/WebAuthn patterns
+- **[Auth Reference Architecture](./auth-reference-architecture.md)** - Detailed Cognito flows, FIDO2/WebAuthn patterns
 
-### Service-Specific
+### Quick Reference
 
-- **[Auth Service README](../services/auth/README.md)** - Quick reference for auth service configuration and usage
-
-### Key Concepts
-
-| Topic                    | Where to Find It                                                            |
-| ------------------------ | --------------------------------------------------------------------------- |
-| ORPC contract definition | [Internal API](./internal-api.md#contracts)                                 |
-| Service dependency chain | [IAC Patterns](./iac-patterns.md#service-dependencies)                      |
-| Magic Link flow diagrams | [Auth Reference](./auth-reference-architecture.md#magic-links-architecture) |
-| SSM parameter paths      | [IAC Patterns](./iac-patterns.md#cross-service-configuration)               |
-| Adding new auth methods  | [Auth README](../services/auth/README.md#adding-new-auth-methods)           |
-| Local development setup  | [Internal API](./internal-api.md#local-development-with-aws-credentials)    |
+| Topic                     | Where to Find It                                                                      |
+| ------------------------- | ------------------------------------------------------------------------------------- |
+| API endpoints & tokens    | [Auth README](../services/auth/README.md#api-endpoints)                               |
+| Magic Link code flow      | [Magic Link Implementation](./magic-link-implementation.md#code-flow-overview)        |
+| URL structure             | [Auth README](../services/auth/README.md#url-structure)                               |
+| Environment variables     | [Auth README](../services/auth/README.md#environment-variables)                       |
+| Cognito triggers          | [Magic Link Implementation](./magic-link-implementation.md#cognito-custom-auth-flow)  |
+| Infrastructure constructs | [Magic Link Implementation](./magic-link-implementation.md#infrastructure-constructs) |
+| ORPC contract definition  | [Internal API](./internal-api.md#contracts)                                           |
+| Service dependency chain  | [IAC Patterns](./iac-patterns.md#service-dependencies)                                |
+| SSM parameter paths       | [IAC Patterns](./iac-patterns.md#cross-service-configuration)                         |
+| Local development setup   | [Internal API](./internal-api.md#local-development-with-aws-credentials)              |
 
 ## Summary
 

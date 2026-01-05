@@ -38,6 +38,38 @@ const client = createInternalApiClient({
 const user = await client.user.get({ id: 'user-123' });
 ```
 
+### API Endpoints
+
+| Endpoint                    | Method | Description                            | Status                     |
+| --------------------------- | ------ | -------------------------------------- | -------------------------- |
+| `/auth/users/{id}`          | GET    | Get user by ID                         | TODO - not yet implemented |
+| `/auth/magic-link/initiate` | POST   | Start magic link authentication        | Implemented                |
+| `/auth/magic-link/complete` | POST   | Complete authentication, return tokens | Implemented                |
+
+**Request/Response Summary:**
+
+| Endpoint     | Input                    | Output                                                         |
+| ------------ | ------------------------ | -------------------------------------------------------------- |
+| `initiate`   | `{ email, redirectUri }` | `{ session, message }`                                         |
+| `complete`   | `{ session, secret }`    | `{ accessToken, idToken, refreshToken, expiresIn, tokenType }` |
+| `users/{id}` | `{ id }`                 | `{ id, email }` (TODO)                                         |
+
+> **Full schemas**: See [`@contract/internal-api/auth`](../../packages/contract-internal-api/src/auth.ts)
+>
+> **Contract-first design**: See [Internal API Documentation](../../docs/internal-api.md) for how contracts, routers, and clients work.
+
+### Token Response
+
+Upon successful magic link authentication, the following tokens are returned:
+
+| Token             | Purpose                                                |
+| ----------------- | ------------------------------------------------------ |
+| **Access Token**  | API authorization (short-lived, ~1 hour)               |
+| **ID Token**      | User identity claims (email, sub, custom attributes)   |
+| **Refresh Token** | Obtain new tokens without re-authentication (~30 days) |
+
+> **Note**: Token storage strategy (localStorage, sessionStorage, memory, cookies) is the consumer's decision based on security requirements.
+
 ## Cognito Authentication
 
 ### Infrastructure (`infra/`)
@@ -76,13 +108,31 @@ Magic Links provide a secure, passwordless authentication method where users rec
 
 ### URL Structure
 
-Magic links use hash fragments to pass the secret:
+Magic links use hash fragments (not query parameters) to pass the secret:
 
 ```
 https://app.example.com/auth/callback#<message.base64url>.<signature.base64url>
 ```
 
-The URL does **not** contain a session token. Sessions are managed by Cognito.
+Where `message` is a base64url-encoded JSON object containing:
+
+```json
+{
+  "userName": "user@example.com",
+  "iat": 1234567890,
+  "exp": 1234568790
+}
+```
+
+**Why hash fragments?**
+
+- Hash fragments are not sent to the server in HTTP requests
+- Prevents magic link secrets from appearing in server logs
+- Client-side JavaScript extracts the secret for verification
+
+The URL does **not** contain a session token. Sessions are managed by Cognito and stored in HttpOnly cookies.
+
+> **Authentication flows**: See [Authentication Architecture](../../docs/auth.md#magic-link-callback-flow) for detailed sequence diagrams.
 
 ### Cross-Browser Support
 
@@ -187,63 +237,51 @@ See [Internal API Documentation](../../docs/internal-api.md) for more details on
 
 ### Environment Variables
 
-The Lambda handlers use the following environment variables (automatically configured):
+Lambda functions are configured with the following environment variables (automatically set by infrastructure constructs):
 
-**Magic Link Specific:**
+#### All Cognito Trigger Lambdas
 
-- `MAGIC_LINK_ENABLED` - Whether magic link auth is enabled
-- `ALLOWED_ORIGINS` - Comma-separated list of allowed origins
-- `SES_FROM_ADDRESS` - Email address for sending magic links
-- `SES_REGION` - AWS region for SES
-- `KMS_KEY_ID` - KMS key ID/alias for signing
-- `DYNAMODB_SECRETS_TABLE` - DynamoDB table name
-- `SECONDS_UNTIL_EXPIRY` - Magic link expiration time (default: 900)
-- `MIN_SECONDS_BETWEEN` - Minimum time between requests (default: 60)
-- `STACK_ID` - CloudFormation stack ID (used as salt)
+| Variable    | Description       | Default |
+| ----------- | ----------------- | ------- |
+| `LOG_LEVEL` | Logging verbosity | `INFO`  |
 
-**Common:**
+#### CreateAuthChallenge Lambda
 
-- `LOG_LEVEL` - Logging level (DEBUG | INFO | ERROR)
+| Variable                 | Description                              | Default      |
+| ------------------------ | ---------------------------------------- | ------------ |
+| `MAGIC_LINK_ENABLED`     | Enable magic link auth                   | `TRUE`       |
+| `ALLOWED_ORIGINS`        | Comma-separated allowed redirect origins | -            |
+| `SES_FROM_ADDRESS`       | Email sender address                     | -            |
+| `SES_REGION`             | AWS region for SES                       | Stack region |
+| `KMS_KEY_ID`             | KMS key ID/alias for signing             | -            |
+| `DYNAMODB_SECRETS_TABLE` | DynamoDB table for magic link state      | -            |
+| `SECONDS_UNTIL_EXPIRY`   | Link expiration in seconds               | `900`        |
+| `MIN_SECONDS_BETWEEN`    | Rate limiting interval in seconds        | `60`         |
+| `STACK_ID`               | CloudFormation stack ID (used as salt)   | Auto         |
 
-## Adding New Auth Methods
+#### VerifyAuthChallengeResponse Lambda
 
-The architecture supports adding new authentication methods without modifying existing code:
+| Variable                 | Description                     |
+| ------------------------ | ------------------------------- |
+| `MAGIC_LINK_ENABLED`     | Enable magic link auth          |
+| `ALLOWED_ORIGINS`        | Comma-separated allowed origins |
+| `DYNAMODB_SECRETS_TABLE` | DynamoDB table name             |
+| `STACK_ID`               | CloudFormation stack ID         |
 
-1. **Create implementation** in `functions/src/cognito/custom-auth/`
+#### Internal API Lambda
 
-   ```typescript
-   // functions/src/cognito/custom-auth/fido2.ts
-   export async function addChallengeToEvent(event, logger) {
-     /* ... */
-   }
-   export async function addChallengeVerificationResultToEvent(event, logger) {
-     /* ... */
-   }
-   ```
+| Variable               | Description                           |
+| ---------------------- | ------------------------------------- |
+| `COGNITO_USER_POOL_ID` | Cognito User Pool ID (via SST Config) |
+| `COGNITO_CLIENT_ID`    | Cognito Client ID (via SST Config)    |
 
-2. **Update handlers** in `functions/src/cognito/handlers/`
+## Related Documentation
 
-   ```typescript
-   // create-auth-challenge.ts
-   import * as fido2 from '../custom-auth/fido2.js';
-
-   case 'FIDO2':
-     await fido2.addChallengeToEvent(event, logger);
-     break;
-   ```
-
-3. **Create infrastructure construct** in `infra/cognito/`
-
-   ```typescript
-   // infra/cognito/Fido2.ts
-   export class Fido2 extends Construct {
-     constructor(scope, id, props: { cognitoTriggers: CognitoTriggers }) {
-       // Configure Lambda environment variables and permissions
-     }
-   }
-   ```
-
-4. **Update SignInMethod type** in `functions/src/cognito/common.ts`
+- **[Magic Link Implementation](../../docs/magic-link-implementation.md)** - Code flow, key files, Cognito triggers, infrastructure constructs
+- **[Authentication Architecture](../../docs/auth.md)** - Design principles, flow diagrams, security model
+- **[Internal API](../../docs/internal-api.md)** - Contract-first design, client creation, IAM authentication
+- **[IAC Patterns](../../docs/iac-patterns.md)** - Service configuration, SSM parameters, dependencies
+- **[Auth Reference Architecture](../../docs/auth-reference-architecture.md)** - Detailed Cognito flows, FIDO2/WebAuthn patterns
 
 ## References
 

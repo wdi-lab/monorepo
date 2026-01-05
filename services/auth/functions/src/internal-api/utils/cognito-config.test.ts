@@ -4,23 +4,19 @@ import {
   CognitoIdentityProviderClient,
   DescribeUserPoolClientCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
-import {
-  getCognitoConfig,
-  getCognitoClientSecret,
-  resetCache,
-} from './cognito-config.ts';
-
-// Mock Config
-vi.mock('sst/node/config', () => ({
-  Config: {
-    COGNITO_USER_POOL_ID: { value: 'test-pool-id' },
-    COGNITO_CLIENT_ID: { value: 'test-client-id' },
-  },
-}));
 
 const mockCognitoClient = mockClient(CognitoIdentityProviderClient);
 
-describe('cognito-config', () => {
+describe('cognito-config', async () => {
+  // mock config via env variables
+  vi.stubEnv('SST_Parameter_value_COGNITO_USER_POOL_ID', 'test-pool-id');
+  vi.stubEnv('SST_Parameter_value_COGNITO_CLIENT_ID', 'test-client-id');
+  vi.stubEnv('SST_APP', 'test-client-id');
+
+  // Import the module under test after setting up mocks
+  const { getCognitoConfig, getCognitoClientSecret, resetCache } =
+    await import('./cognito-config.ts');
+
   beforeEach(() => {
     mockCognitoClient.reset();
     resetCache();
