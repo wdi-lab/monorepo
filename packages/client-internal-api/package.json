@@ -32,6 +32,7 @@
   "devDependencies": {
     "@config/eslint": "workspace:*",
     "@config/tsconfig": "workspace:*",
+    "@orpc/shared": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "eslint": "catalog:",

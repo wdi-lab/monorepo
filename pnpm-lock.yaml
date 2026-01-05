@@ -42,6 +42,9 @@ catalogs:
     '@orpc/server':
       specifier: ^1.13.2
       version: 1.13.2
+    '@orpc/shared':
+      specifier: ^1.13.2
+      version: 1.13.2
     '@testing-library/jest-dom':
       specifier: ^6.9.1
       version: 6.9.1
@@ -156,6 +159,9 @@ importers:
       '@config/tsconfig':
         specifier: workspace:*
         version: link:../config-tsconfig
+      '@orpc/shared':
+        specifier: 'catalog:'
+        version: 1.13.2
       '@types/node':
         specifier: 'catalog:'
         version: 22.19.3
@@ -766,6 +772,40 @@ importers:
       sst:
         specifier: 'catalog:'
         version: 2.49.6(@aws-cdk/cli-plugin-contract@2.182.0)(@aws-sdk/client-sso-oidc@3.699.0(@aws-sdk/client-sts@3.699.0(aws-crt@1.28.1))(aws-crt@1.28.1))(@types/react@19.2.7)(aws-crt@1.28.1)
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.0.16(@types/node@22.19.3)(@vitest/browser-playwright@4.0.16)(@vitest/ui@4.0.16)(jiti@2.6.1)(jsdom@27.3.0)(tsx@4.21.0)(yaml@2.8.2)
+
+  system-tests:
+    dependencies:
+      '@aws-sdk/client-ssm':
+        specifier: 'catalog:'
+        version: 3.962.0(aws-crt@1.28.1)
+      '@client/internal-api':
+        specifier: workspace:*
+        version: link:../packages/client-internal-api
+      '@contract/internal-api':
+        specifier: workspace:*
+        version: link:../packages/contract-internal-api
+      '@lib/sst-helpers':
+        specifier: workspace:*
+        version: link:../packages/sst-helpers
+    devDependencies:
+      '@config/eslint':
+        specifier: workspace:*
+        version: link:../packages/config-eslint
+      '@config/tsconfig':
+        specifier: workspace:*
+        version: link:../packages/config-tsconfig
+      '@types/node':
+        specifier: 'catalog:'
+        version: 22.19.3
+      eslint:
+        specifier: 'catalog:'
+        version: 9.39.2(jiti@2.6.1)
       typescript:
         specifier: 'catalog:'
         version: 5.9.3

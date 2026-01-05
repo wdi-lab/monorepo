@@ -12,6 +12,7 @@
     "type-check": "turbo run type-check",
     "test": "turbo run test",
     "test:run": "turbo run test:run",
+    "system-tests": "turbo run system-tests",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,md}\"",
     "clean": "pnpm -r exec rm -rf node_modules .turbo .sst .tanstack .output dist coverage && rm -rf node_modules .turbo"

@@ -1,0 +1,26 @@
+{
+  "name": "@test/system-tests",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "system-tests": "node run-tests.mjs",
+    "system-tests:watch": "node run-tests.mjs --watch",
+    "lint": "eslint \"**/*.ts*\"",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-ssm": "catalog:",
+    "@client/internal-api": "workspace:*",
+    "@contract/internal-api": "workspace:*",
+    "@lib/sst-helpers": "workspace:*"
+  },
+  "devDependencies": {
+    "@config/eslint": "workspace:*",
+    "@config/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

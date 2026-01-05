@@ -14,13 +14,17 @@ Monorepo for a full-stack application with:
 ## Commands
 
 - **Install**: `pnpm install` (requires Node.js >=22, pnpm >=10.26.2)
-- **Dev**: `pnpm dev` (all services) or `cd services/main-ui/app && pnpm dev` (single service). **IMPORTANT**: For SST services (`services/auth`, `services/main-api`), running `pnpm dev` requires AWS credentials and will prompt for a stage name. Always ask the user for both the stage name and AWS credentials method (e.g., aws-vault profile) before running SST dev commands.
+- **Dev**: See [Local Development Guide](docs/local-dev.md) for detailed instructions. Quick reference:
+  - Backend (SST): `cd services/<service-name> && pnpm dev --stage <stage>` (requires AWS credentials and stage name)
+  - Frontend: `cd services/<service-name>/app && pnpm dev --stage <stage>`
+  - **IMPORTANT**: Always ask the user for both the stage name and AWS credentials method (e.g., aws-vault profile) before running dev commands. Check if services are already running with `ps aux | grep "sst dev"` or `ps aux | grep "vite dev"`.
 - **Build**: `pnpm build` (uses Turborepo, builds all packages/services including type check)
 - **Deploy**: `cd services/main-ui && pnpm run deploy -- --stage <stage>` (SST deployment, use current branch for stage, requires AWS credentials)
 - **Lint**: `pnpm lint` (all) or `cd services/main-ui/app && pnpm lint` (single package)
 - **Type Check**: `pnpm type-check` (all) or `cd services/main-ui/app && pnpm type-check` (single)
 - **Format**: `pnpm format` (write), `pnpm format:check` (check only)
-- **Test**: `cd services/main-ui/app && pnpm test` (watch mode), `pnpm test:run` (single run), `vitest run src/path/to/file.test.tsx` (single file). **IMPORTANT**: When asked to write or run tests, always consult the relevant testing documentation first: `docs/iac-testing.md` for infrastructure/SST/CDK tests, or `docs/manual-testing.md` for manual testing with browser/UI
+- **Test**: `cd services/main-ui/app && pnpm test` (watch mode), `pnpm test:run` (single run), `vitest run src/path/to/file.test.tsx` (single file). **IMPORTANT**: When asked to write or run tests, always consult the relevant testing documentation first: `docs/iac-testing.md` for infrastructure/SST/CDK tests, `docs/manual-testing.md` for manual testing with browser/UI, or see `system-tests/` for integration tests against deployed services
+- **System Tests**: `cd system-tests && aws-vault exec <profile> -- pnpm system-tests -- --stage <stage>` (single run, default), `pnpm system-tests:watch -- --stage <stage>` (watch mode). Integration tests that run against deployed services by calling internal APIs or dispatching events. **Requires AWS credentials** because tests run against real deployed AWS resources. The `--stage` parameter specifies which deployed stage to test (e.g., `dev`, `test`, `preview`). The `--region` parameter specifies AWS region (defaults to process.env_AWS_REGION). All other parameters are passed through to Vitest. Since these are slow, they default to single-run mode rather than watch mode.
 
 ## AWS Credentials
 
@@ -28,6 +32,7 @@ For SST services requiring AWS credentials, the user may use aws-vault or other 
 
 ## Additional Documentation
 
+- **[Local Development](docs/local-dev.md)**: Guide for running backend and frontend services locally
 - **[Manual Browser Testing](docs/manual-testing.md)**: Guide for using Playwright MCP tools for interactive browser testing
 - **[IAC Testing](docs/iac-testing.md)**: Infrastructure testing patterns and best practices for SST/CDK code
 - **[Auth Documentation](docs/auth.md)**: Authentication implementation details

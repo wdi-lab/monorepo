@@ -4,6 +4,8 @@
 
 This guide covers how to use Playwright MCP tools for manual browser testing in development. This approach allows interactive browser testing without writing automated test scripts.
 
+> **Note**: For detailed instructions on running local development services, see [Local Development Guide](local-dev.md).
+
 ## When to Use Manual Browser Testing
 
 - **Feature Verification**: Manually verify new features work as expected
@@ -35,109 +37,37 @@ Before starting any service or app in local dev mode:
 
 ## Starting Local Development Services and Apps
 
-### Backend Services (SST)
+> **For detailed instructions on starting and managing local dev services, see [Local Development Guide](local-dev.md).**
 
-Start any backend service (auth, main-api, etc.) in local dev mode using `nohup` to run in the background:
+Quick reference:
+
+**Backend Services (SST):**
 
 ```bash
 cd services/<service-name>
 nohup aws-vault exec <aws-profile> -- pnpm dev --stage <stage> > dev.log 2>&1 &
 ```
 
-**If AWS credentials are not required**, omit the aws-vault part:
+**Frontend Apps (TanStack Start):**
 
 ```bash
-cd services/<service-name>
-nohup pnpm dev --stage <stage> > dev.log 2>&1 &
+cd services/<service-name>/app
+nohup aws-vault exec <aws-profile> -- pnpm dev --stage <stage> > dev.log 2>&1 &
 ```
 
 **Check if running:**
 
 ```bash
-ps aux | grep "sst dev" | grep <service-name>
+ps aux | grep "sst dev" | grep -v grep  # Backend
+ps aux | grep "vite dev" | grep -v grep  # Frontend
 ```
 
-**View logs in real-time:**
+**View logs:**
 
 ```bash
 tail -f services/<service-name>/dev.log
-```
-
-**Stop viewing logs:** Press `Ctrl+C` (this only stops viewing, not the service)
-
-### Frontend/SSR Apps (TanStack Start)
-
-Start any frontend app (main-ui, etc.) in local dev mode using `nohup` to run in the background:
-
-```bash
-cd services/<service-name>/app
-nohup aws-vault exec <aws-profile> -- pnpm dev --stage <stage> > dev.log 2>&1 &
-```
-
-**If AWS credentials are not required**, omit the aws-vault part:
-
-```bash
-cd services/<service-name>/app
-nohup pnpm dev --stage <stage> > dev.log 2>&1 &
-```
-
-**Check if running:**
-
-```bash
-ps aux | grep "vite dev"
-```
-
-**View logs in real-time:**
-
-```bash
+# or
 tail -f services/<service-name>/app/dev.log
-```
-
-**Stop viewing logs:** Press `Ctrl+C` (this only stops viewing, not the service)
-
-**Access the app:** Frontend apps typically run on http://localhost:3000/
-
-**Important Notes:**
-
-- Replace `<service-name>`, `<aws-profile>`, and `<stage>` with actual values
-- The `nohup` command allows services to continue running after closing the terminal
-- All output (stdout and stderr) is redirected to `dev.log` in the working directory
-- The `&` at the end runs the process in the background
-
-### Stopping and Restarting Services
-
-**Find running services:**
-
-```bash
-# Find backend services
-ps aux | grep "sst dev" | grep -v grep
-
-# Find frontend apps
-ps aux | grep "vite dev" | grep -v grep
-```
-
-**Stop a specific service:**
-
-```bash
-# Find the process ID (PID) from the ps output, then:
-kill <PID>
-
-# Or force kill if needed:
-kill -9 <PID>
-```
-
-**Restart a service:** Stop it using the command above, then start it again using the appropriate start command.
-
-**Stop all SST services:**
-
-```bash
-pkill -f "sst dev"
-```
-
-**Stop all Vite dev servers:**
-
-```bash
-pkill -f "vite dev"
 ```
 
 ## Testing Workflow for AI Agents

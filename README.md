@@ -30,11 +30,15 @@ A modern, full-stack monorepo powered by [TanStack Start](https://tanstack.com/s
 ├── packages/
 │   ├── ui/                   # Shared UI components (Chakra UI)
 │   ├── contract-internal-api/ # Shared API contracts (ORPC)
+│   ├── client-internal-api/  # ORPC client with AWS SigV4 signing
 │   ├── sst-constructs/       # Shared SST/CDK constructs
 │   ├── sst-helpers/          # SST utility functions
 │   ├── config-eslint/        # Shared ESLint configurations
 │   └── config-tsconfig/      # Shared TypeScript configurations
+├── system-tests/             # Integration tests for deployed services
 ├── docs/                     # Documentation
+│   ├── local-dev.md          # Local development guide
+│   ├── manual-testing.md     # Manual browser testing guide
 │   ├── internal-api.md       # Internal API guide
 │   ├── iac-testing.md        # Infrastructure testing guide
 │   └── iac-patterns.md       # Infrastructure patterns
@@ -110,11 +114,63 @@ Format code with Prettier:
 pnpm format
 ```
 
+### Testing
+
+#### Unit and Infrastructure Tests
+
+Run tests for a specific package or service:
+
+```bash
+cd services/main-ui/app && pnpm test        # Watch mode
+cd services/main-ui/app && pnpm test:run    # Single run
+cd services/auth/infra && pnpm test         # Infrastructure tests
+```
+
+See [IAC Testing Guide](docs/iac-testing.md) for infrastructure testing patterns.
+
+#### System Tests (Integration)
+
+**IMPORTANT**: System tests are integration tests that run against deployed AWS services. They can be slow and flaky, so **reserve them for critical paths only**.
+
+System tests verify end-to-end behavior by calling real service endpoints with type-safe ORPC clients. They require:
+
+- Valid AWS credentials (aws-vault recommended)
+- Deployed services to test against
+- Stage name (e.g., `dev`, `test`, `preview`)
+
+```bash
+# Run system tests against deployed stage
+cd system-tests && aws-vault exec <profile> -- pnpm system-tests -- --stage dev
+
+# Specify custom region (defaults to us-west-2)
+cd system-tests && pnpm system-tests -- --stage dev --region us-east-1
+
+# Watch mode for development
+cd system-tests && pnpm system-tests:watch -- --stage dev
+```
+
+**When to use system tests:**
+
+- Test critical user flows end-to-end (login, checkout, core operations)
+- Verify cross-service integrations for critical paths
+- Test against real AWS infrastructure (DynamoDB, SQS, Lambda)
+
+**When NOT to use system tests:**
+
+- Comprehensive scenario coverage (use unit tests instead - faster, more reliable)
+- Business logic validation (use unit tests)
+- Edge cases (use unit tests unless critical)
+
+See [system-tests/README.md](system-tests/README.md) for detailed usage and examples.
+
 ## Documentation
 
+- [Local Development Guide](docs/local-dev.md) - Running backend and frontend services locally
+- [Manual Browser Testing](docs/manual-testing.md) - Interactive browser testing with Playwright
 - [Internal API Guide](docs/internal-api.md) - Type-safe inter-service communication with ORPC
 - [IAC Testing Guide](docs/iac-testing.md) - Testing AWS infrastructure code
 - [IAC Patterns](docs/iac-patterns.md) - Infrastructure code patterns
+- [System Tests](system-tests/README.md) - Integration tests for deployed services
 
 ## Package Catalog
 
@@ -217,15 +273,17 @@ The repository includes VS Code configuration for optimal development experience
 
 ## Scripts Reference
 
-| Command           | Description                                |
-| ----------------- | ------------------------------------------ |
-| `pnpm install`    | Install all dependencies                   |
-| `pnpm dev`        | Start development servers                  |
-| `pnpm build`      | Build all packages and services            |
-| `pnpm lint`       | Lint all packages                          |
-| `pnpm type-check` | Run TypeScript type checking               |
-| `pnpm format`     | Format code with Prettier                  |
-| `pnpm clean`      | Clean all node_modules and build artifacts |
+| Command             | Description                                   |
+| ------------------- | --------------------------------------------- |
+| `pnpm install`      | Install all dependencies                      |
+| `pnpm dev`          | Start development servers                     |
+| `pnpm build`        | Build all packages and services               |
+| `pnpm lint`         | Lint all packages                             |
+| `pnpm type-check`   | Run TypeScript type checking                  |
+| `pnpm format`       | Format code with Prettier                     |
+| `pnpm clean`        | Clean all node_modules and build artifacts    |
+| `pnpm test`         | Run unit tests (in specific package)          |
+| `pnpm system-tests` | Run integration tests (requires --stage, AWS) |
 
 ## Learn More
 

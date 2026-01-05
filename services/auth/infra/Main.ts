@@ -10,12 +10,12 @@ import { MagicLink } from './cognito/MagicLink.ts';
 export function Main(context: StackContext) {
   const { stack, app } = context;
 
-  const authKmsKey = kms.Key.fromKeyArn(
+  const magicLinkKey = kms.Key.fromKeyArn(
     stack,
-    'ImportedKmsKey',
+    'ImportedMagicLinkKmsKey',
     envConfig.getValue(context, {
       path: 'kms/key-arn',
-      id: 'auth',
+      id: 'auth-magic-link',
     })
   );
 
@@ -65,7 +65,7 @@ export function Main(context: StackContext) {
   const magicLink = new MagicLink(stack, 'magic-link', {
     cognitoTriggers,
     allowedOrigins,
-    kmsKey: authKmsKey,
+    kmsKey: magicLinkKey,
     ses: {
       fromAddress: `noreply@${mainEmailDomain}`,
       // Optional: specify region if SES is in a different region

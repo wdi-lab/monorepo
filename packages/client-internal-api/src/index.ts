@@ -1,11 +1,13 @@
-import { createORPCClient } from '@orpc/client';
+import { createORPCClient, onError } from '@orpc/client';
 import { OpenAPILink } from '@orpc/openapi-client/fetch';
 import type { JsonifiedClient } from '@orpc/openapi-client';
 import type { ContractRouterClient, AnyContractRouter } from '@orpc/contract';
+import type { Interceptor } from '@orpc/shared';
 import { signRequest, type AwsSignatureV4Options } from './sign-request.js';
 
 export type { AwsSignatureV4Options } from './sign-request.js';
 export { extractAwsInfoFromUrl, type AwsUrlInfo } from './aws-url.js';
+export { onError, onSuccess, onStart, onFinish } from '@orpc/client';
 
 export type InternalApiClient<TContract extends AnyContractRouter> =
   JsonifiedClient<ContractRouterClient<TContract>>;
@@ -38,6 +40,48 @@ export interface CreateInternalApiClientOptions<
    * - When an object: use the provided options for signing.
    */
   awsSignatureV4?: AwsSignatureV4Options | false;
+
+  /**
+   * Error handler for the OpenAPI link.
+   * Shorthand for `interceptors: [onError(handler)]`.
+   *
+   * @example
+   * ```ts
+   * const client = createInternalApiClient({
+   *   contract,
+   *   baseUrl: 'https://api.example.com',
+   *   onError: (error) => {
+   *     console.error('API error:', error);
+   *   },
+   * });
+   * ```
+   */
+  onError?: (error: unknown) => void;
+
+  /**
+   * Custom interceptors for the OpenAPI link.
+   * Use interceptors from '@orpc/client' like `onError`, `onSuccess`, `onStart`, `onFinish`.
+   *
+   * @example
+   * ```ts
+   * import { onError, onSuccess } from '@client/internal-api';
+   *
+   * const client = createInternalApiClient({
+   *   contract,
+   *   baseUrl: 'https://api.example.com',
+   *   interceptors: [
+   *     onError((error) => {
+   *       console.error('API error:', error);
+   *     }),
+   *     onSuccess((result) => {
+   *       console.log('API success:', result);
+   *     }),
+   *   ],
+   * });
+   * ```
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  interceptors?: Interceptor<any, any>[];
 }
 
 /**
@@ -46,11 +90,50 @@ export interface CreateInternalApiClientOptions<
  * By default, requests are signed using AWS Signature V4 for API Gateway
  * using the default credential provider chain.
  * Set `awsSignatureV4: false` to disable signing.
+ *
+ * @example
+ * ```ts
+ * import { createInternalApiClient, onError } from '@client/internal-api';
+ * import { contract } from '@contract/internal-api/auth';
+ *
+ * // Basic usage
+ * const client = createInternalApiClient({
+ *   contract,
+ *   baseUrl: 'https://api.example.com',
+ * });
+ *
+ * // With error handling (shorthand)
+ * const clientWithErrorHandling = createInternalApiClient({
+ *   contract,
+ *   baseUrl: 'https://api.example.com',
+ *   onError: (error) => {
+ *     console.error('API error:', error);
+ *   },
+ * });
+ *
+ * // With multiple interceptors
+ * const clientWithInterceptors = createInternalApiClient({
+ *   contract,
+ *   baseUrl: 'https://api.example.com',
+ *   interceptors: [
+ *     onError((error) => {
+ *       console.error('API error:', error);
+ *     }),
+ *   ],
+ * });
+ * ```
  */
 export function createInternalApiClient<TContract extends AnyContractRouter>(
   options: CreateInternalApiClientOptions<TContract>
 ): InternalApiClient<TContract> {
-  const { contract, baseUrl, headers, awsSignatureV4 } = options;
+  const {
+    contract,
+    baseUrl,
+    headers,
+    awsSignatureV4,
+    interceptors,
+    onError: onErrorHandler,
+  } = options;
 
   const resolveUrl = typeof baseUrl === 'function' ? baseUrl : () => baseUrl;
   const resolveHeaders =
@@ -65,6 +148,12 @@ export function createInternalApiClient<TContract extends AnyContractRouter>(
     ? awsSignatureV4 || {}
     : undefined;
 
+  // Combine onError handler with custom interceptors
+  const allInterceptors = [
+    ...(onErrorHandler ? [onError(onErrorHandler)] : []),
+    ...(interceptors || []),
+  ];
+
   const link = new OpenAPILink(contract, {
     url: resolveUrl,
     headers: resolveHeaders,
@@ -74,6 +163,11 @@ export function createInternalApiClient<TContract extends AnyContractRouter>(
           return fetch(signedRequest, init);
         }
       : undefined,
+    interceptors:
+      allInterceptors.length > 0
+        ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (allInterceptors as any)
+        : undefined,
   });
 
   return createORPCClient(link);

@@ -38,6 +38,10 @@
       "dependsOn": ["^build"],
       "outputs": ["coverage/**"]
     },
+    "system-tests": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
     "deploy": {
       "dependsOn": ["^build", "^deploy"]
     },

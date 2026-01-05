@@ -89,8 +89,13 @@ const resolveServiceKey = <S extends ServiceNameValue>(
 /**
  * Generates a consistent SSM parameter path
  * Format: /service/<service-name>/<stage>/<resource-key>
+ *
+ * @example
+ * // Build parameter name directly
+ * const paramName = buildParameterName('dev', 'auth', 'internal-api-url');
+ * // Returns: /service/auth/dev/internal-api-url
  */
-const _internal_getParameterName = (
+export const buildParameterName = (
   stage: string,
   serviceName: ServiceNameValue,
   key: string
@@ -126,7 +131,7 @@ export const createParameter = <S extends ServiceNameValue>(
   const id = `ServiceConfig-${service}-${key}`.replace(/[^a-zA-Z0-9-]/g, '-');
 
   return new StringParameter(options.scope ?? stack, id, {
-    parameterName: _internal_getParameterName(app.stage, service, key),
+    parameterName: buildParameterName(app.stage, service, key),
     stringValue: options.value,
   });
 };
@@ -167,7 +172,7 @@ export const getParameterValue = <S extends ServiceNameValue>(
 
   return StringParameter.valueForStringParameter(
     options.scope ?? stack,
-    _internal_getParameterName(app.stage, service, key)
+    buildParameterName(app.stage, service, key)
   );
 };
 
@@ -233,5 +238,5 @@ export const getParameterName = <S extends ServiceNameValue>(
     validateServiceDependency(service);
   }
 
-  return _internal_getParameterName(app.stage, service, key);
+  return buildParameterName(app.stage, service, key);
 };

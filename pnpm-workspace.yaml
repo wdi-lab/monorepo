@@ -3,6 +3,7 @@ packages:
   - services/*/app
   - services/*/functions
   - packages/*
+  - system-tests
 
 catalog:
   '@aws-sdk/client-cognito-identity-provider': ^3.895.0
@@ -17,6 +18,7 @@ catalog:
   '@orpc/openapi': ^1.13.2
   '@orpc/openapi-client': ^1.13.2
   '@orpc/server': ^1.13.2
+  '@orpc/shared': ^1.13.2
   '@orpc/zod': ^1.13.2
   '@testing-library/jest-dom': ^6.9.1
   '@testing-library/react': ^16.3.1
