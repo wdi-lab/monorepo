@@ -24,7 +24,7 @@ describe('MagicLinkService', () => {
   describe('initiate', () => {
     it('should initiate magic link flow and return session', async () => {
       const email = 'test@example.com';
-      const redirectUri = 'https://example.com/auth/callback';
+      const redirectUri = 'https://example.com/auth/magic-link';
 
       // Mock the InitiateAuth response
       cognitoMock.on(InitiateAuthCommand).resolves({
@@ -81,7 +81,7 @@ describe('MagicLinkService', () => {
 
     it('should throw error if InitiateAuth fails without session', async () => {
       const email = 'test@example.com';
-      const redirectUri = 'https://example.com/auth/callback';
+      const redirectUri = 'https://example.com/auth/magic-link';
 
       cognitoMock.on(InitiateAuthCommand).resolves({
         // No Session field
@@ -94,7 +94,7 @@ describe('MagicLinkService', () => {
 
     it('should throw error if RespondToAuthChallenge fails without session', async () => {
       const email = 'test@example.com';
-      const redirectUri = 'https://example.com/auth/callback';
+      const redirectUri = 'https://example.com/auth/magic-link';
 
       cognitoMock.on(InitiateAuthCommand).resolves({
         Session: 'initial-session-token',
@@ -162,7 +162,7 @@ describe('MagicLinkService', () => {
 
     it('should include redirectUri in complete flow metadata', async () => {
       const session = 'challenge-session-token';
-      const redirectUri = 'https://example.com/auth/callback';
+      const redirectUri = 'https://example.com/auth/magic-link';
       const message = JSON.stringify({ userName: 'test@example.com' });
       const messageB64 = Buffer.from(message).toString('base64url');
       const secret = `${messageB64}.signature`;

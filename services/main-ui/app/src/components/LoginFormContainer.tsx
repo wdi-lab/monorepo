@@ -37,7 +37,7 @@ export function LoginFormContainer({
 
     try {
       // Construct the redirect URI (where the magic link will redirect back to)
-      const redirectUri = `${window.location.origin}/auth/callback`;
+      const redirectUri = `${window.location.origin}/auth/magic-link`;
 
       // Call the server function to initiate magic link
       // Server function sets HttpOnly cookies for session and redirect path

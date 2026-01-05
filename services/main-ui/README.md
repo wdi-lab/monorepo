@@ -72,13 +72,13 @@ The main-ui service **does NOT have direct access to Cognito**. All authenticati
 
 ## Routes
 
-| Route                | Description                                                 |
-| -------------------- | ----------------------------------------------------------- |
-| `/`                  | Home page                                                   |
-| `/about`             | About page                                                  |
-| `/login`             | Login page with magic link form                             |
-| `/login/check-email` | Email confirmation page                                     |
-| `/auth/callback`     | Magic link callback handler (server reads HttpOnly cookies) |
+| Route                | Description                                                                   |
+| -------------------- | ----------------------------------------------------------------------------- |
+| `/`                  | Home page                                                                     |
+| `/about`             | About page                                                                    |
+| `/login`             | Login page with magic link form                                               |
+| `/login/check-email` | Email confirmation page                                                       |
+| `/auth/magic-link`   | Magic link callback handler (server processes hash, stores tokens in session) |
 
 ### Magic Link Flow
 
@@ -90,13 +90,15 @@ The magic link authentication flow uses **server-side cookie management**:
    - **Server sets HttpOnly cookies** for session and redirect path
    - User redirected to `/login/check-email`
 
-2. **Callback route** (`/auth/callback`):
+2. **Magic link route** (`/auth/magic-link`):
    - User clicks magic link in email
-   - Hash fragment parsed client-side for secret
-   - Server function reads session from **HttpOnly cookie**
-   - Server completes authentication with auth API
-   - **Server deletes HttpOnly cookies** (one-time use)
-   - Tokens stored in localStorage, user redirected
+   - Client extracts hash fragment and sends to server
+   - Server function `processMagicLink` handles all logic:
+     - Parses hash, extracts email for cross-browser fallback
+     - Reads session from **HttpOnly cookie**
+     - Completes authentication with auth API
+     - Stores tokens in **session** (not localStorage)
+   - Client redirects user to original destination
 
 **Cross-browser support**: If magic link is opened in a different browser (no cookie), the client detects the error and initiates a new auth session.
 

@@ -111,7 +111,7 @@ Magic Links provide a secure, passwordless authentication method where users rec
 Magic links use hash fragments (not query parameters) to pass the secret:
 
 ```
-https://app.example.com/auth/callback#<message.base64url>.<signature.base64url>
+https://app.example.com/auth/magic-link#<message.base64url>.<signature.base64url>
 ```
 
 Where `message` is a base64url-encoded JSON object containing:

@@ -185,7 +185,7 @@ const authClient = createInternalApiClient({
 // Make type-safe API calls
 const response = await authClient.magicLink.initiate({
   email: 'test@example.com',
-  redirectUri: 'https://example.com/auth/callback',
+  redirectUri: 'https://example.com/auth/magic-link',
 });
 // TypeScript knows the exact shape of response!
 ```
@@ -223,7 +223,7 @@ describe('Auth Service - Magic Link', () => {
   it('should initiate magic link authentication', async () => {
     const response = await authClient.magicLink.initiate({
       email: 'test@example.com',
-      redirectUri: 'https://example.com/auth/callback',
+      redirectUri: 'https://example.com/auth/magic-link',
     });
 
     // Type-safe response with autocomplete
@@ -237,7 +237,7 @@ describe('Auth Service - Magic Link', () => {
     await expect(
       authClient.magicLink.initiate({
         email: 'invalid-email',
-        redirectUri: 'https://example.com/auth/callback',
+        redirectUri: 'https://example.com/auth/magic-link',
       })
     ).rejects.toThrow();
   });

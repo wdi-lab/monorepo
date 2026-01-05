@@ -16,9 +16,18 @@ const sessionConfig = {
     'change-me-in-production-to-a-secure-random-string-at-least-32-chars-long',
 };
 
+type AuthTokens = {
+  accessToken: string;
+  idToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  tokenType: string;
+};
+
 type MagicLinkSessionData = {
   cognitoSession?: string;
   redirectPath?: string;
+  authTokens?: AuthTokens;
 };
 
 /**
@@ -62,48 +71,98 @@ export const initiateMagicLink = createServerFn({ method: 'POST' })
   });
 
 /**
- * Server function to complete magic link authentication
+ * Server function to get the redirect path from session
  *
- * Reads session from encrypted session cookie (same-browser) or accepts session parameter
- * (cross-browser). Clears session after successful authentication.
+ * Used by callback route to determine where to redirect after authentication.
  */
-export const completeMagicLink = createServerFn({ method: 'POST' })
-  .inputValidator((data: { session?: string; secret: string }) => data)
+export const getRedirectPath = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const session = await useSession<MagicLinkSessionData>(sessionConfig);
+    return session.data.redirectPath || '/';
+  }
+);
+
+/**
+ * Server function to process magic link callback
+ *
+ * Handles the entire magic link completion flow:
+ * 1. Parses the hash to extract email (for cross-browser fallback)
+ * 2. Attempts completion with session from HttpOnly cookie
+ * 3. Handles cross-browser case by re-initiating auth if no session
+ * 4. Stores tokens in session on success
+ *
+ * @param hash - The URL hash fragment (without #) containing the magic link secret
+ * @param redirectUri - The redirect URI for cross-browser fallback (e.g., https://example.com/auth/magic-link)
+ */
+export const processMagicLink = createServerFn({ method: 'POST' })
+  .inputValidator((data: { hash: string; redirectUri: string }) => data)
   .handler(async ({ data }) => {
     try {
-      // Get session from encrypted cookie or parameter
-      const session = await useSession<MagicLinkSessionData>(sessionConfig);
-      const cognitoSession = data.session || session.data.cognitoSession;
-
-      if (!cognitoSession) {
+      // Validate hash exists
+      if (!data.hash) {
         return {
-          success: false,
-          error: 'No session found. Please request a new magic link.',
+          success: false as const,
+          error: 'No magic link data found in URL',
         };
       }
 
+      // Parse hash to extract email (for cross-browser fallback)
+      let email: string;
+      try {
+        const [messageB64] = data.hash.split('.');
+        const message = JSON.parse(
+          Buffer.from(messageB64, 'base64url').toString()
+        );
+        email = message.userName;
+      } catch {
+        return { success: false as const, error: 'Invalid magic link format' };
+      }
+
+      // Get session
+      const session = await useSession<MagicLinkSessionData>(sessionConfig);
+      let cognitoSession = session.data.cognitoSession;
+
+      // Handle cross-browser case (no session cookie exists)
+      if (!cognitoSession) {
+        try {
+          const initiateResponse = await authClient.magicLink.initiate({
+            email,
+            redirectUri: data.redirectUri,
+          });
+          cognitoSession = initiateResponse.session;
+        } catch {
+          return {
+            success: false as const,
+            error: 'Failed to initiate authentication session',
+          };
+        }
+      }
+
+      // Complete magic link authentication
       const response = await authClient.magicLink.complete({
         session: cognitoSession,
-        secret: data.secret,
+        secret: data.hash,
       });
 
-      // Clear session after successful authentication (one-time use)
-      await session.clear();
-
-      return {
-        success: true,
-        tokens: {
+      // Store tokens in session & clear auth session data
+      const redirectPath = session.data.redirectPath || '/';
+      await session.update({
+        cognitoSession: undefined,
+        redirectPath: undefined,
+        authTokens: {
           accessToken: response.accessToken,
           idToken: response.idToken,
           refreshToken: response.refreshToken,
           expiresIn: response.expiresIn,
           tokenType: response.tokenType,
         },
-      };
+      });
+
+      return { success: true as const, redirectPath };
     } catch (error) {
-      console.error('Error completing magic link:', error);
+      console.error('Error processing magic link:', error);
       return {
-        success: false,
+        success: false as const,
         error:
           error instanceof Error
             ? error.message
@@ -113,13 +172,13 @@ export const completeMagicLink = createServerFn({ method: 'POST' })
   });
 
 /**
- * Server function to get the redirect path from session
+ * Server function to get auth tokens from session
  *
- * Used by callback route to determine where to redirect after authentication.
+ * Used by the app to retrieve stored authentication tokens.
  */
-export const getRedirectPath = createServerFn({ method: 'GET' }).handler(
+export const getAuthTokens = createServerFn({ method: 'GET' }).handler(
   async () => {
     const session = await useSession<MagicLinkSessionData>(sessionConfig);
-    return session.data.redirectPath || '/';
+    return session.data.authTokens || null;
   }
 );

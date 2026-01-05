@@ -1,13 +1,9 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { Box, Card, Center, Heading, Spinner, Text, VStack } from '@lib/ui';
-import {
-  completeMagicLink,
-  getRedirectPath,
-  initiateMagicLink,
-} from '~/server/auth';
+import { processMagicLink } from '~/server/auth';
 
-export const Route = createFileRoute('/auth/callback')({
+export const Route = createFileRoute('/auth/magic-link')({
   // No validateSearch - we parse hash fragment on client side
   component: RouteComponent,
   head: () => ({
@@ -27,72 +23,27 @@ function RouteComponent() {
 
   useEffect(() => {
     const completeAuth = async () => {
-      try {
-        // Parse hash fragment for magic link secret
-        const hash = window.location.hash.slice(1); // Remove leading '#'
-        if (!hash) {
-          throw new Error('No magic link data found in URL');
-        }
+      // Extract hash from URL - all processing logic is on server
+      const hash = window.location.hash.slice(1); // Remove leading '#'
+      const redirectUri = `${window.location.origin}/auth/magic-link`;
 
-        // Extract email from secret for cross-browser fallback
-        const [messageB64] = hash.split('.');
-        const message = JSON.parse(
-          Buffer.from(messageB64, 'base64url').toString()
-        );
-        const email = message.userName;
+      const result = await processMagicLink({
+        data: { hash, redirectUri },
+      });
 
-        // First attempt: Try to complete with session from HttpOnly cookie (same-browser)
-        let result = await completeMagicLink({
-          data: { secret: hash },
-        });
-
-        // Cross-browser case: No session cookie exists, initiate new auth to get session
-        if (
-          !result.success &&
-          result.error &&
-          result.error.includes('No session found')
-        ) {
-          const redirectUri = `${window.location.origin}/auth/callback`;
-          const initiateResult = await initiateMagicLink({
-            data: { email, redirectUri },
-          });
-
-          if (!initiateResult.success) {
-            throw new Error('Failed to initiate authentication session');
-          }
-
-          // Try again with the session we just obtained (stored in HttpOnly cookie by server)
-          result = await completeMagicLink({
-            data: { secret: hash },
-          });
-        }
-
-        if (!result.success) {
-          throw new Error(result.error || 'Authentication failed');
-        }
-
-        // Store tokens
-        // TODO: Consider using httpOnly cookies set by the server for token storage
-        localStorage.setItem('authTokens', JSON.stringify(result.tokens));
-
-        // Get redirect path from server (reads from HttpOnly cookie)
-        const redirectPath = await getRedirectPath();
-
+      if (result.success) {
         // Clean up URL (remove hash fragment)
         window.history.replaceState(null, '', window.location.pathname);
-
         setStatus('success');
 
         // Redirect to the original destination
         setTimeout(() => {
-          navigate({ to: redirectPath });
+          navigate({ to: result.redirectPath });
         }, 1000);
-      } catch (error) {
-        console.error('Magic link completion failed:', error);
+      } else {
+        console.error('Magic link processing failed:', result.error);
         setStatus('error');
-        setErrorMessage(
-          error instanceof Error ? error.message : 'Authentication failed'
-        );
+        setErrorMessage(result.error);
       }
     };
 

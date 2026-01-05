@@ -311,16 +311,16 @@ sequenceDiagram
     participant Cognito
 
     User->>MainUI: Click magic link in email
-    MainUI->>MainUI: Parse hash fragment (secret)
-    MainUI->>ServerFn: completeMagicLink({ secret })
+    MainUI->>MainUI: Extract hash fragment
+    MainUI->>ServerFn: processMagicLink({ hash, redirectUri })
+    ServerFn->>ServerFn: Parse hash, extract email
     ServerFn->>ServerFn: Read session from HttpOnly cookie
     ServerFn->>AuthAPI: completeMagicLink({ session, secret })
     AuthAPI->>Cognito: RespondToAuthChallenge (session + secret)
     Cognito->>AuthAPI: JWTs
     AuthAPI->>ServerFn: Return tokens
-    ServerFn->>ServerFn: Delete HttpOnly cookies
-    ServerFn->>MainUI: Return tokens
-    MainUI->>MainUI: Store tokens in localStorage
+    ServerFn->>ServerFn: Store tokens in session, clear auth cookies
+    ServerFn->>MainUI: Return { success, redirectPath }
     MainUI->>User: Redirect to app
 ```
 
@@ -337,41 +337,34 @@ sequenceDiagram
     participant Cognito
 
     User->>MainUI: Click magic link in email (different browser)
-    MainUI->>MainUI: Parse hash fragment (secret)
-    MainUI->>ServerFn: completeMagicLink({ secret })
+    MainUI->>MainUI: Extract hash fragment
+    MainUI->>ServerFn: processMagicLink({ hash, redirectUri })
+    ServerFn->>ServerFn: Parse hash, extract email
     ServerFn->>ServerFn: No session cookie found
-    ServerFn->>MainUI: Error: "No session found"
-    MainUI->>MainUI: Extract email from secret
-    MainUI->>ServerFn: initiateMagicLink({ email })
-    ServerFn->>AuthAPI: initiateMagicLink({ email })
+    ServerFn->>AuthAPI: initiateMagicLink({ email, redirectUri })
     AuthAPI->>Cognito: InitiateAuth (CUSTOM_AUTH)
     Cognito->>AuthAPI: New session token
     AuthAPI->>ServerFn: Return session
-    ServerFn->>ServerFn: Set HttpOnly cookie with session
-    ServerFn->>MainUI: Success
-    MainUI->>ServerFn: completeMagicLink({ secret })
-    ServerFn->>ServerFn: Read session from HttpOnly cookie
     ServerFn->>AuthAPI: completeMagicLink({ session, secret })
     AuthAPI->>Cognito: RespondToAuthChallenge (session + secret)
     Cognito->>AuthAPI: JWTs
     AuthAPI->>ServerFn: Return tokens
-    ServerFn->>ServerFn: Delete HttpOnly cookies
-    ServerFn->>MainUI: Return tokens
-    MainUI->>MainUI: Store tokens in localStorage
+    ServerFn->>ServerFn: Store tokens in session
+    ServerFn->>MainUI: Return { success, redirectPath }
     MainUI->>User: Redirect to app
 ```
 
 **Key Implementation Details:**
 
-1. **Server-side cookie management**: Cookies are set/read/deleted in **server functions**, not client code
+1. **Server-side processing**: All hash parsing and cross-browser detection happens in `processMagicLink` server function
 2. **HttpOnly cookies**: Session tokens stored in HttpOnly cookies (inaccessible to JavaScript - prevents XSS)
 3. **Secure cookies**: HTTPS only with `Secure` flag (prevents man-in-the-middle attacks)
 4. **SameSite=Strict**: CSRF protection via strict same-site cookie policy
-5. **Cross-browser handling**: Server detects missing cookie, client calls `initiateMagicLink` for fresh session
+5. **Token storage**: Auth tokens stored in server session (not localStorage)
 6. **Service encapsulation**: main-ui never calls Cognito directly - all Cognito interactions stay in auth service
 7. **Separation of concerns**:
-   - Client (routes): User flow logic, hash fragment parsing
-   - Server (server functions): Cookie management, auth API calls
+   - Client (routes): Extract hash, display loading/success/error UI
+   - Server (server functions): All processing logic, cookie management, auth API calls
    - Auth service: Cognito operations
 
 ## Related Documentation

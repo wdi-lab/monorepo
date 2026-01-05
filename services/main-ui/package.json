@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@infra/auth": "workspace:*",
+    "@infra/shared-infra": "workspace:*",
     "@app/main-ui": "workspace:*",
     "@lib/sst-constructs": "workspace:*",
     "@lib/sst-helpers": "workspace:*"
