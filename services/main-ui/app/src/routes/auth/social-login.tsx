@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import * as z from 'zod';
 import { Box, Card, Center, Heading, Spinner, Text, VStack } from '@lib/ui';
@@ -14,7 +14,37 @@ const searchSchema = z.object({
 
 type SearchParams = z.infer<typeof searchSchema>;
 
-export const Route = createFileRoute('/auth/social/callback')({
+/**
+ * Check if the current window is a popup opened by window.open()
+ * A popup will have window.opener pointing to the parent window
+ */
+function isPopupWindow(): boolean {
+  try {
+    return window.opener !== null && window.opener !== window;
+  } catch {
+    // Cross-origin access will throw, which means we're likely not in a popup
+    return false;
+  }
+}
+
+/**
+ * Send message to parent window and close popup
+ * Uses a small delay before closing to ensure the message is delivered
+ */
+function notifyParentAndClose(
+  type: 'social-login-success' | 'social-login-error',
+  error?: string
+) {
+  if (window.opener) {
+    window.opener.postMessage({ type, error }, window.location.origin);
+    // Small delay to ensure message is delivered before popup closes
+    setTimeout(() => {
+      window.close();
+    }, 100);
+  }
+}
+
+export const Route = createFileRoute('/auth/social-login')({
   validateSearch: (search): SearchParams => searchSchema.parse(search),
   component: RouteComponent,
   head: () => ({
@@ -26,30 +56,43 @@ export const Route = createFileRoute('/auth/social/callback')({
 });
 
 function RouteComponent() {
-  const navigate = useNavigate();
   const search = Route.useSearch();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>(
     'loading'
   );
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
+  const [isPopup] = useState(() => isPopupWindow());
 
   useEffect(() => {
     const completeAuth = async () => {
       // Check for OAuth error from provider
       if (search.error) {
-        setStatus('error');
-        setErrorMessage(
+        const error =
           search.error_description ||
-            search.error ||
-            'Authentication was cancelled or failed'
-        );
+          search.error ||
+          'Authentication was cancelled or failed';
+
+        if (isPopup) {
+          notifyParentAndClose('social-login-error', error);
+          return;
+        }
+
+        setStatus('error');
+        setErrorMessage(error);
         return;
       }
 
       // Validate required params for success case
       if (!search.code || !search.state) {
+        const error = 'Missing required callback parameters';
+
+        if (isPopup) {
+          notifyParentAndClose('social-login-error', error);
+          return;
+        }
+
         setStatus('error');
-        setErrorMessage('Missing required callback parameters');
+        setErrorMessage(error);
         return;
       }
 
@@ -64,19 +107,32 @@ function RouteComponent() {
       if (result.success) {
         // Clean up URL (remove query params)
         window.history.replaceState(null, '', window.location.pathname);
-        setStatus('success');
 
-        // Redirect to the original destination
-        navigate({ to: result.redirectPath });
+        if (isPopup) {
+          // Notify parent window and close popup
+          notifyParentAndClose('social-login-success');
+          return;
+        }
+
+        setStatus('success');
+        // Full page redirect to ensure fresh auth state is loaded
+        // Client-side navigation would keep stale AuthProvider state
+        window.location.href = result.redirectPath;
       } else {
         console.error('Social login processing failed:', result.error);
+
+        if (isPopup) {
+          notifyParentAndClose('social-login-error', result.error);
+          return;
+        }
+
         setStatus('error');
         setErrorMessage(result.error);
       }
     };
 
     completeAuth();
-  }, [navigate, search]);
+  }, [search, isPopup]);
 
   return (
     <Center minH="100vh" bg="gray.50">

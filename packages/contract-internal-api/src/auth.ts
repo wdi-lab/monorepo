@@ -120,6 +120,29 @@ export const completeSocialLogin = oc
   );
 
 /**
+ * Contract for refreshing authentication tokens
+ * Uses Cognito REFRESH_TOKEN_AUTH flow to get new access/id tokens
+ *
+ * Note: The refresh token itself is not rotated by Cognito REFRESH_TOKEN_AUTH flow.
+ * Only access and id tokens are renewed.
+ */
+export const refreshTokens = oc
+  .route({ method: 'POST', path: '/tokens/refresh' })
+  .input(
+    z.object({
+      refreshToken: z.string(),
+    })
+  )
+  .output(
+    z.object({
+      accessToken: z.string(),
+      idToken: z.string(),
+      expiresIn: z.number(),
+      tokenType: z.string(),
+    })
+  );
+
+/**
  * Internal API contract router
  */
 export const contract = {
@@ -133,6 +156,9 @@ export const contract = {
   socialLogin: {
     initiate: initiateSocialLogin,
     complete: completeSocialLogin,
+  },
+  tokens: {
+    refresh: refreshTokens,
   },
 };
 

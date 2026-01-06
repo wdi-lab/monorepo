@@ -677,12 +677,21 @@ importers:
       '@lib/ui':
         specifier: workspace:*
         version: link:../../../packages/ui
+      '@tanstack/react-query':
+        specifier: ^5.90.16
+        version: 5.90.16(react@19.2.3)
+      '@tanstack/react-query-devtools':
+        specifier: ^5.91.2
+        version: 5.91.2(@tanstack/react-query@5.90.16(react@19.2.3))(react@19.2.3)
       '@tanstack/react-router':
         specifier: ^1.143.4
         version: 1.143.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@tanstack/react-router-devtools':
         specifier: ^1.143.4
         version: 1.143.4(@tanstack/react-router@1.143.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@tanstack/router-core@1.143.4)(csstype@3.2.3)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(solid-js@1.9.10)
+      '@tanstack/react-router-ssr-query':
+        specifier: ^1.145.7
+        version: 1.145.7(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@tanstack/react-router@1.143.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@tanstack/router-core@1.143.4)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@tanstack/react-start':
         specifier: ^1.143.4
         version: 1.143.4(crossws@0.4.1(srvx@0.9.8))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(vite@7.3.0(@types/node@20.19.27)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
@@ -3227,6 +3236,23 @@ packages:
     resolution: {integrity: sha512-LS54XNyxyTs5m/pl1lkwlg7uZM3lvsv2FIIV1rsJgnfwVCnI+n4ZGZ2CcjNT13BPu/3hPP+iHmliBSscJxW5FQ==}
     engines: {node: '>=12'}
 
+  '@tanstack/query-core@5.90.16':
+    resolution: {integrity: sha512-MvtWckSVufs/ja463/K4PyJeqT+HMlJWtw6PrCpywznd2NSgO3m4KwO9RqbFqGg6iDE8vVMFWMeQI4Io3eEYww==}
+
+  '@tanstack/query-devtools@5.92.0':
+    resolution: {integrity: sha512-N8D27KH1vEpVacvZgJL27xC6yPFUy0Zkezn5gnB3L3gRCxlDeSuiya7fKge8Y91uMTnC8aSxBQhcK6ocY7alpQ==}
+
+  '@tanstack/react-query-devtools@5.91.2':
+    resolution: {integrity: sha512-ZJ1503ay5fFeEYFUdo7LMNFzZryi6B0Cacrgr2h1JRkvikK1khgIq6Nq2EcblqEdIlgB/r7XDW8f8DQ89RuUgg==}
+    peerDependencies:
+      '@tanstack/react-query': ^5.90.14
+      react: ^18 || ^19
+
+  '@tanstack/react-query@5.90.16':
+    resolution: {integrity: sha512-bpMGOmV4OPmif7TNMteU/Ehf/hoC0Kf98PDc0F4BZkFrEapRMEqI/V6YS0lyzwSV6PQpY1y4xxArUIfBW5LVxQ==}
+    peerDependencies:
+      react: ^18 || ^19
+
   '@tanstack/react-router-devtools@1.143.4':
     resolution: {integrity: sha512-+AKGHkC2aDL93XCWDMB9/cf8+N4awGylCK0mk0kJ5BUBVSoZpNVLtZiBFCxRuvZCQtY5PbdYT4xeUA0dbgH9Eg==}
     engines: {node: '>=12'}
@@ -3238,6 +3264,16 @@ packages:
     peerDependenciesMeta:
       '@tanstack/router-core':
         optional: true
+
+  '@tanstack/react-router-ssr-query@1.145.7':
+    resolution: {integrity: sha512-WspGCAtuhBGBeNiqZ3IytxMckJsj2+5MOAvDi8nXvvSU1S2QDZPylc82jKnayQEbWwnE3bh/etRBWAG0eBkbYA==}
+    engines: {node: '>=12'}
+    peerDependencies:
+      '@tanstack/query-core': '>=5.90.0'
+      '@tanstack/react-query': '>=5.90.0'
+      '@tanstack/react-router': '>=1.127.0'
+      react: '>=18.0.0 || >=19.0.0'
+      react-dom: '>=18.0.0 || >=19.0.0'
 
   '@tanstack/react-router@1.143.4':
     resolution: {integrity: sha512-7Tz7YwJc8RKDQga3yNY03zNc/ey+AIDA1A5ppGYqIM+UR47uGdAKc/4MSpItznqkSUi1Csrw2nVtICSkGanKdQ==}
@@ -3313,6 +3349,13 @@ packages:
         optional: true
       webpack:
         optional: true
+
+  '@tanstack/router-ssr-query-core@1.145.7':
+    resolution: {integrity: sha512-Jlc94EMK/7ftUjfmkHzKRnhvaTJQoXVzcDMeGm+kSQq0T0F2q40yCWH8i968LoNb2oW43CjpHj7TzjqnTqIFEw==}
+    engines: {node: '>=12'}
+    peerDependencies:
+      '@tanstack/query-core': '>=5.90.0'
+      '@tanstack/router-core': '>=1.127.0'
 
   '@tanstack/router-utils@1.141.0':
     resolution: {integrity: sha512-/eFGKCiix1SvjxwgzrmH4pHjMiMxc+GA4nIbgEkG2RdAJqyxLcRhd7RPLG0/LZaJ7d0ad3jrtRqsHLv2152Vbw==}
@@ -12040,6 +12083,21 @@ snapshots:
 
   '@tanstack/history@1.141.0': {}
 
+  '@tanstack/query-core@5.90.16': {}
+
+  '@tanstack/query-devtools@5.92.0': {}
+
+  '@tanstack/react-query-devtools@5.91.2(@tanstack/react-query@5.90.16(react@19.2.3))(react@19.2.3)':
+    dependencies:
+      '@tanstack/query-devtools': 5.92.0
+      '@tanstack/react-query': 5.90.16(react@19.2.3)
+      react: 19.2.3
+
+  '@tanstack/react-query@5.90.16(react@19.2.3)':
+    dependencies:
+      '@tanstack/query-core': 5.90.16
+      react: 19.2.3
+
   '@tanstack/react-router-devtools@1.143.4(@tanstack/react-router@1.143.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@tanstack/router-core@1.143.4)(csstype@3.2.3)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(solid-js@1.9.10)':
     dependencies:
       '@tanstack/react-router': 1.143.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -12051,6 +12109,17 @@ snapshots:
     transitivePeerDependencies:
       - csstype
       - solid-js
+
+  '@tanstack/react-router-ssr-query@1.145.7(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@tanstack/react-router@1.143.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@tanstack/router-core@1.143.4)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
+    dependencies:
+      '@tanstack/query-core': 5.90.16
+      '@tanstack/react-query': 5.90.16(react@19.2.3)
+      '@tanstack/react-router': 1.143.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@tanstack/router-ssr-query-core': 1.145.7(@tanstack/query-core@5.90.16)(@tanstack/router-core@1.143.4)
+      react: 19.2.3
+      react-dom: 19.2.3(react@19.2.3)
+    transitivePeerDependencies:
+      - '@tanstack/router-core'
 
   '@tanstack/react-router@1.143.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
     dependencies:
@@ -12166,6 +12235,11 @@ snapshots:
       vite: 7.3.0(@types/node@20.19.27)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
     transitivePeerDependencies:
       - supports-color
+
+  '@tanstack/router-ssr-query-core@1.145.7(@tanstack/query-core@5.90.16)(@tanstack/router-core@1.143.4)':
+    dependencies:
+      '@tanstack/query-core': 5.90.16
+      '@tanstack/router-core': 1.143.4
 
   '@tanstack/router-utils@1.141.0':
     dependencies:
@@ -12801,7 +12875,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vitest: 4.0.16(@types/node@22.19.3)(@vitest/browser-playwright@4.0.16)(@vitest/ui@4.0.16)(jiti@2.6.1)(jsdom@27.3.0)(tsx@4.21.0)(yaml@2.8.2)
+      vitest: 4.0.16(@types/node@20.19.27)(@vitest/browser-playwright@4.0.16)(@vitest/ui@4.0.16)(jiti@2.6.1)(jsdom@27.3.0)(tsx@4.21.0)(yaml@2.8.2)
     optional: true
 
   '@vitest/utils@3.2.4':
@@ -15070,7 +15144,7 @@ snapshots:
 
   inherits@2.0.4: {}
 
-  ink-spinner@5.0.0(ink@4.4.1(@types/react@19.2.7)(react@18.3.1))(react@18.3.1):
+  ink-spinner@5.0.0(ink@4.4.1(@types/react@19.2.7)(react@19.2.3))(react@18.3.1):
     dependencies:
       cli-spinners: 2.9.2
       ink: 4.4.1(@types/react@19.2.7)(react@18.3.1)
@@ -16554,7 +16628,7 @@ snapshots:
       graphql-yoga: 3.9.1(graphql@16.12.0)
       immer: 9.0.21
       ink: 4.4.1(@types/react@19.2.7)(react@18.3.1)
-      ink-spinner: 5.0.0(ink@4.4.1(@types/react@19.2.7)(react@18.3.1))(react@18.3.1)
+      ink-spinner: 5.0.0(ink@4.4.1(@types/react@19.2.7)(react@19.2.3))(react@18.3.1)
       kysely: 0.25.0
       kysely-codegen: 0.10.1(kysely@0.25.0)
       kysely-data-api: 0.2.1(@aws-sdk/client-rds-data@3.699.0(aws-crt@1.28.1))(kysely@0.25.0)

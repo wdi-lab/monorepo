@@ -8,6 +8,7 @@ The main UI service provides the primary web interface for the application. It u
 
 - **TanStack Start** - Full-stack React framework with SSR
 - **TanStack Router** - Type-safe routing with file-based routes
+- **TanStack Query** - Data fetching with SSR integration via `@tanstack/react-router-ssr-query`
 - **Chakra UI v3** - Component library via `@lib/ui`
 - **Vite** - Build tooling and dev server
 - **SST** - Infrastructure deployment via `NitroSite`
@@ -76,9 +77,10 @@ The main-ui service **does NOT have direct access to Cognito**. All authenticati
 | -------------------- | ----------------------------------------------------------------------------- |
 | `/`                  | Home page                                                                     |
 | `/about`             | About page                                                                    |
-| `/login`             | Login page with magic link form                                               |
-| `/login/check-email` | Email confirmation page                                                       |
+| `/login`             | Login page with magic link form (accepts `?redirect=` param)                  |
+| `/dashboard`         | Protected dashboard (requires authentication)                                 |
 | `/auth/magic-link`   | Magic link callback handler (server processes hash, stores tokens in session) |
+| `/auth/social-login` | Social login callback handler (OAuth code exchange)                           |
 
 ### Magic Link Flow
 
@@ -157,6 +159,157 @@ export const initiateMagicLink = createServerFn({ method: 'POST' })
 - ✅ SSR compatible - cookies work during server rendering
 
 See [Internal API docs](../../docs/internal-api.md) and [Auth docs](../../docs/auth.md) for more details.
+
+## Session Management & Token Refresh
+
+The application uses TanStack Query as the single source of truth for authentication state, with automatic token refresh handled via `refetchInterval`.
+
+### TanStack Query SSR Integration
+
+The app uses `@tanstack/react-router-ssr-query` to properly handle QueryClient lifecycle:
+
+```typescript
+// router.tsx - Fresh QueryClient per request
+export function getRouter() {
+  const queryClient = new QueryClient(createQueryClientOptions());
+
+  const router = createRouter({
+    routeTree,
+    context: { queryClient },
+  });
+
+  // Auto-wraps with QueryClientProvider
+  setupRouterSsrQueryIntegration({ router, queryClient });
+
+  return router;
+}
+```
+
+**Why this matters:**
+
+- **SSR Safety**: Each server request gets a fresh QueryClient, preventing auth state from leaking between users
+- **Automatic Provider**: The integration wraps the router with `QueryClientProvider` automatically
+- **Context Access**: Routes access `queryClient` via `context.queryClient` in `beforeLoad`
+
+### AuthProvider
+
+The `AuthProvider` uses TanStack Query's `useQuery` with `refetchInterval` for automatic token refresh:
+
+```typescript
+// Root route fetches auth status once via queryClient
+export const Route = createRootRouteWithContext<RouterContext>()({
+  beforeLoad: async ({ context }) => {
+    const auth = await fetchAuthStatus(context.queryClient);
+    return { auth };
+  },
+});
+
+// AuthProvider uses useQuery as single source of truth
+const { data: authStatus } = useQuery({
+  queryKey: AUTH_STATUS_QUERY_KEY,
+  queryFn: authStatusQueryFn,
+  initialData: initialStatus,
+  refetchInterval: (query) => calculateRefetchInterval(query.state.data),
+  refetchIntervalInBackground: false,
+});
+```
+
+### Using Auth State
+
+Access auth state anywhere using the `useAuth()` hook:
+
+```typescript
+import { useAuth } from '~/providers/AuthProvider';
+
+function MyComponent() {
+  const {
+    user,           // User info (id, email, name, picture)
+    isAuthenticated,// Whether access token is valid
+    canRefresh,     // Whether refresh token exists
+    sessionState,   // 'active' | 'expired' | 'login'
+    isRefreshing,   // Whether refresh is in progress
+    refresh,        // Manual refresh trigger
+    onLoginSuccess, // Update state after login
+    onLogout,       // Clear state after logout
+  } = useAuth();
+
+  return <div>Welcome, {user?.name}</div>;
+}
+```
+
+### Automatic Token Refresh
+
+TanStack Query's `refetchInterval` handles automatic token refresh:
+
+- **Proactive**: Refreshes 5 minutes before expiry (configurable)
+- **Jittered**: Random delay (±10%) prevents thundering herd when multiple users have similar expiry times
+- **Visibility-aware**: `refetchIntervalInBackground: false` pauses refresh when tab is hidden
+- **Failure handling**: Falls back to login on refresh failure
+
+```typescript
+// calculateRefetchInterval adds jitter to prevent thundering herd
+export function calculateRefetchInterval(
+  data: AuthStatus | undefined
+): number | false {
+  if (!data?.expiresAt || !data.canRefresh || !data.isAuthenticated) {
+    return false;
+  }
+
+  const msUntilExpiry = data.expiresAt - Date.now();
+  const baseInterval = Math.max(msUntilExpiry - REFRESH_BEFORE_MS, 0);
+
+  // Add ±10% jitter
+  const jitter = baseInterval * 0.1 * (Math.random() * 2 - 1);
+  return Math.max(baseInterval + jitter, MIN_INTERVAL_MS);
+}
+```
+
+### Protected Routes
+
+The `_authenticated` layout protects child routes:
+
+| Scenario                            | Behavior                                    |
+| ----------------------------------- | ------------------------------------------- |
+| Direct navigation (unauthenticated) | Redirect to `/login?redirect=/path`         |
+| Session expires while on page       | Show `SessionExpiredDialog`                 |
+| Refresh fails                       | Show `LoginModal` (content already visible) |
+
+### Login Integration
+
+**From Header** (triggers modal):
+
+```typescript
+const { openLoginModal } = useLoginModal();
+const { onLoginSuccess } = useAuth();
+
+const handleLoginSuccess = async () => {
+  const status = await getAuthStatus();
+  onLoginSuccess(status); // Updates query cache via setQueryData
+};
+
+openLoginModal({ onSuccess: handleLoginSuccess });
+```
+
+**From /login page** (redirects):
+
+```typescript
+// Callback uses full page redirect to load fresh auth state
+window.location.href = result.redirectPath;
+```
+
+**Logout**:
+
+```typescript
+const { onLogout } = useAuth();
+
+const handleLogout = async () => {
+  await logout();
+  onLogout(); // Removes query cache via removeQueries
+  window.location.href = '/';
+};
+```
+
+See [Auth docs - Client-Side Session Management](../../docs/auth.md#client-side-session-management) for detailed architecture.
 
 ## Development
 
@@ -268,3 +421,5 @@ Key dependencies:
 - `@orpc/client` - ORPC client for internal API calls
 - `@tanstack/react-start` - Full-stack React framework
 - `@tanstack/react-router` - Type-safe routing
+- `@tanstack/react-query` - Data fetching and caching
+- `@tanstack/react-router-ssr-query` - SSR integration for Query + Router

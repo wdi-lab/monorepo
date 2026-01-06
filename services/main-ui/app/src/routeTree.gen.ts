@@ -11,9 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthSocialLoginRouteImport } from './routes/auth/social-login'
 import { Route as AuthMagicLinkRouteImport } from './routes/auth/magic-link'
-import { Route as AuthSocialCallbackRouteImport } from './routes/auth/social/callback'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -25,9 +27,18 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthSocialLoginRoute = AuthSocialLoginRouteImport.update({
+  id: '/auth/social-login',
+  path: '/auth/social-login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthMagicLinkRoute = AuthMagicLinkRouteImport.update({
@@ -35,33 +46,37 @@ const AuthMagicLinkRoute = AuthMagicLinkRouteImport.update({
   path: '/auth/magic-link',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthSocialCallbackRoute = AuthSocialCallbackRouteImport.update({
-  id: '/auth/social/callback',
-  path: '/auth/social/callback',
-  getParentRoute: () => rootRouteImport,
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
   '/auth/magic-link': typeof AuthMagicLinkRoute
-  '/auth/social/callback': typeof AuthSocialCallbackRoute
+  '/auth/social-login': typeof AuthSocialLoginRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
   '/auth/magic-link': typeof AuthMagicLinkRoute
-  '/auth/social/callback': typeof AuthSocialCallbackRoute
+  '/auth/social-login': typeof AuthSocialLoginRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/auth/magic-link': typeof AuthMagicLinkRoute
-  '/auth/social/callback': typeof AuthSocialCallbackRoute
+  '/auth/social-login': typeof AuthSocialLoginRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -69,25 +84,35 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/login'
+    | '/dashboard'
     | '/auth/magic-link'
-    | '/auth/social/callback'
+    | '/auth/social-login'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/login' | '/auth/magic-link' | '/auth/social/callback'
-  id:
-    | '__root__'
+  to:
     | '/'
     | '/about'
     | '/login'
+    | '/dashboard'
     | '/auth/magic-link'
-    | '/auth/social/callback'
+    | '/auth/social-login'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/about'
+    | '/login'
+    | '/_authenticated/dashboard'
+    | '/auth/magic-link'
+    | '/auth/social-login'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AboutRoute: typeof AboutRoute
   LoginRoute: typeof LoginRoute
   AuthMagicLinkRoute: typeof AuthMagicLinkRoute
-  AuthSocialCallbackRoute: typeof AuthSocialCallbackRoute
+  AuthSocialLoginRoute: typeof AuthSocialLoginRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -106,11 +131,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/social-login': {
+      id: '/auth/social-login'
+      path: '/auth/social-login'
+      fullPath: '/auth/social-login'
+      preLoaderRoute: typeof AuthSocialLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/magic-link': {
@@ -120,22 +159,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthMagicLinkRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth/social/callback': {
-      id: '/auth/social/callback'
-      path: '/auth/social/callback'
-      fullPath: '/auth/social/callback'
-      preLoaderRoute: typeof AuthSocialCallbackRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AboutRoute: AboutRoute,
   LoginRoute: LoginRoute,
   AuthMagicLinkRoute: AuthMagicLinkRoute,
-  AuthSocialCallbackRoute: AuthSocialCallbackRoute,
+  AuthSocialLoginRoute: AuthSocialLoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

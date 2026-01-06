@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { Box, Card, Center, Heading, Spinner, Text, VStack } from '@lib/ui';
 import { processMagicLink } from '~/server/auth';
@@ -15,7 +15,6 @@ export const Route = createFileRoute('/auth/magic-link')({
 });
 
 function RouteComponent() {
-  const navigate = useNavigate();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>(
     'loading'
   );
@@ -36,10 +35,9 @@ function RouteComponent() {
         window.history.replaceState(null, '', window.location.pathname);
         setStatus('success');
 
-        // Redirect to the original destination
-        setTimeout(() => {
-          navigate({ to: result.redirectPath });
-        }, 1000);
+        // Full page redirect to ensure fresh auth state is loaded
+        // Client-side navigation would keep stale AuthProvider state
+        window.location.href = result.redirectPath;
       } else {
         console.error('Magic link processing failed:', result.error);
         setStatus('error');
@@ -48,7 +46,7 @@ function RouteComponent() {
     };
 
     completeAuth();
-  }, [navigate]);
+  }, []);
 
   return (
     <Center minH="100vh" bg="gray.50">

@@ -11,6 +11,7 @@ Comprehensive guide to the authentication architecture, design decisions, and im
 - [Infrastructure Patterns](#infrastructure-patterns)
 - [Security Model](#security-model)
 - [Social Login](#social-login)
+- [Client-Side Session Management](#client-side-session-management)
 - [Related Documentation](#related-documentation)
 
 ## Overview
@@ -443,7 +444,7 @@ sequenceDiagram
 
     Provider->>User: Display consent screen
     User->>Provider: Grant consent
-    Provider->>MainUI: Redirect to /auth/social/callback?code=...&state=...
+    Provider->>MainUI: Redirect to /auth/social-login?code=...&state=...
 
     MainUI->>ServerFn: processSocialCallback({ code, state })
     ServerFn->>ServerFn: Validate state matches session (CSRF protection)
@@ -498,7 +499,7 @@ npx sst secrets set SOCIAL_GOOGLE_CLIENT_ID "NA" --stage <stage>
 | OAuth service             | `services/auth/functions/src/internal-api/services/social-login.ts` |
 | API contract              | `packages/contract-internal-api/src/auth.ts`                        |
 | Frontend server functions | `services/main-ui/app/src/server/auth.ts`                           |
-| Callback route            | `services/main-ui/app/src/routes/auth/social/callback.tsx`          |
+| Callback route            | `services/main-ui/app/src/routes/auth/social-login.tsx`             |
 
 ### Cognito Integration
 
@@ -515,6 +516,41 @@ This approach:
 - Maintains a unified user pool (users can have both magic link and social login)
 - Keeps provider secrets within the auth service
 - Leverages Cognito's token management and refresh capabilities
+
+## Client-Side Session Management
+
+The main-ui service manages authentication state client-side with automatic token refresh. For implementation details, see [main-ui README](../services/main-ui/README.md#session-management--token-refresh).
+
+### Key Concepts
+
+- **TanStack Query**: Single source of truth for auth state via query cache
+- **SSR Safety**: Fresh QueryClient per request prevents auth state leaking between users
+- **Automatic Refresh**: Tokens refresh 5 minutes before expiry with jitter to prevent thundering herd
+- **Visibility-aware**: Refresh pauses when tab is hidden
+
+### Auth State
+
+| Property          | Description                          |
+| ----------------- | ------------------------------------ |
+| `user`            | User info (id, email, name, picture) |
+| `isAuthenticated` | Whether access token is valid        |
+| `canRefresh`      | Whether refresh token exists         |
+| `sessionState`    | `'active' \| 'expired' \| 'login'`   |
+
+### Protected Routes
+
+| Scenario                            | Behavior                            |
+| ----------------------------------- | ----------------------------------- |
+| Direct navigation (unauthenticated) | Redirect to `/login?redirect=/path` |
+| Session expires while on page       | Show `SessionExpiredDialog`         |
+| Refresh fails                       | Open `LoginModal`                   |
+
+### Security
+
+- **Tokens stored server-side**: HttpOnly session cookies, not localStorage
+- **No token exposure**: Client never sees raw JWT tokens
+- **SSR cache isolation**: Fresh QueryClient per request
+- **Protected route redirect**: Unauthenticated users redirected before content renders
 
 ## Related Documentation
 

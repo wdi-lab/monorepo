@@ -24,6 +24,8 @@ type AuthTokens = {
   refreshToken: string;
   expiresIn: number;
   tokenType: string;
+  /** Unix timestamp (ms) when tokens expire. Used for client-side expiry checking. */
+  expiresAt: number;
 };
 
 type SocialLoginSession = {
@@ -91,6 +93,85 @@ export const getRedirectPath = createServerFn({ method: 'GET' }).handler(
     return session.data.redirectPath || '/';
   }
 );
+
+// ============================================================================
+// ID Token Decoding
+// ============================================================================
+
+/**
+ * Decoded ID token payload from Cognito
+ * Contains user information from the identity provider
+ */
+type IdTokenPayload = {
+  /** Subject - unique user identifier */
+  sub: string;
+  /** User's email address */
+  email?: string;
+  /** Whether email is verified */
+  email_verified?: boolean;
+  /** User's full name */
+  name?: string;
+  /** User's given/first name */
+  given_name?: string;
+  /** User's family/last name */
+  family_name?: string;
+  /** URL to user's profile picture */
+  picture?: string;
+  /** Token issuer */
+  iss?: string;
+  /** Audience (client ID) */
+  aud?: string;
+  /** Issued at timestamp */
+  iat?: number;
+  /** Expiration timestamp */
+  exp?: number;
+  /** Authentication time */
+  auth_time?: number;
+  /** Cognito username */
+  'cognito:username'?: string;
+};
+
+/**
+ * User information extracted from ID token
+ */
+export type User = {
+  /** Unique user identifier (sub claim) */
+  id: string;
+  /** User's email address */
+  email: string | null;
+  /** User's display name */
+  name: string | null;
+  /** URL to user's profile picture */
+  picture: string | null;
+};
+
+/**
+ * Decode a JWT token payload without verification
+ * Only use on server-side where tokens are already trusted
+ */
+function decodeJwtPayload<T>(token: string): T | null {
+  try {
+    const [, payloadBase64] = token.split('.');
+    if (!payloadBase64) return null;
+
+    const payload = Buffer.from(payloadBase64, 'base64url').toString('utf-8');
+    return JSON.parse(payload) as T;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Extract user information from ID token payload
+ */
+function extractUserFromIdToken(payload: IdTokenPayload): User {
+  return {
+    id: payload.sub,
+    email: payload.email ?? null,
+    name: payload.name ?? payload.given_name ?? null,
+    picture: payload.picture ?? null,
+  };
+}
 
 /**
  * Server function to process magic link callback
@@ -165,6 +246,7 @@ export const processMagicLink = createServerFn({ method: 'POST' })
           refreshToken: response.refreshToken,
           expiresIn: response.expiresIn,
           tokenType: response.tokenType,
+          expiresAt: Date.now() + response.expiresIn * 1000,
         },
       });
 
@@ -182,14 +264,52 @@ export const processMagicLink = createServerFn({ method: 'POST' })
   });
 
 /**
- * Server function to get auth tokens from session
+ * Server function to get current authentication status
  *
- * Used by the app to retrieve stored authentication tokens.
+ * Returns authentication state with:
+ * - isAuthenticated: true if access token exists and is not expired
+ * - canRefresh: true if refresh token exists (can attempt to renew session)
+ * - expiresAt: Unix timestamp (ms) when access token expires
+ * - user: User information decoded from ID token (when authenticated)
+ *
+ * Auth state scenarios:
+ * - isAuthenticated=true, canRefresh=true: Active session with user info
+ * - isAuthenticated=false, canRefresh=true: Session expired, can refresh
+ * - isAuthenticated=false, canRefresh=false: No session, must login
  */
-export const getAuthTokens = createServerFn({ method: 'GET' }).handler(
+export const getAuthStatus = createServerFn({ method: 'GET' }).handler(
   async () => {
     const session = await useSession<SessionData>(sessionConfig);
-    return session.data.authTokens || null;
+    const authTokens = session.data.authTokens;
+
+    // No tokens at all - not authenticated and can't refresh
+    if (!authTokens) {
+      return {
+        isAuthenticated: false as const,
+        canRefresh: false as const,
+        expiresAt: null,
+        user: null,
+      };
+    }
+
+    const isExpired = Date.now() >= authTokens.expiresAt;
+    const canRefresh = !!authTokens.refreshToken;
+
+    // Decode ID token to get user information
+    let user: User | null = null;
+    if (authTokens.idToken) {
+      const payload = decodeJwtPayload<IdTokenPayload>(authTokens.idToken);
+      if (payload) {
+        user = extractUserFromIdToken(payload);
+      }
+    }
+
+    return {
+      isAuthenticated: !isExpired,
+      canRefresh,
+      expiresAt: authTokens.expiresAt,
+      user,
+    };
   }
 );
 
@@ -305,6 +425,7 @@ export const processSocialCallback = createServerFn({ method: 'POST' })
           refreshToken: response.refreshToken,
           expiresIn: response.expiresIn,
           tokenType: response.tokenType,
+          expiresAt: Date.now() + response.expiresIn * 1000,
         },
       });
 
@@ -320,3 +441,88 @@ export const processSocialCallback = createServerFn({ method: 'POST' })
       };
     }
   });
+
+/**
+ * Server function to refresh authentication tokens
+ *
+ * Calls the auth service to get new access/id tokens using the refresh token.
+ * Updates the session with new tokens and expiration time.
+ *
+ * @returns Success with new expiration time, or error
+ */
+export const refreshTokens = createServerFn({ method: 'POST' }).handler(
+  async () => {
+    try {
+      const session = await useSession<SessionData>(sessionConfig);
+      const authTokens = session.data.authTokens;
+
+      if (!authTokens?.refreshToken) {
+        return {
+          success: false as const,
+          error: 'No refresh token available',
+        };
+      }
+
+      // Call auth service to refresh tokens
+      const response = await authClient.tokens.refresh({
+        refreshToken: authTokens.refreshToken,
+      });
+
+      // Update session with new tokens
+      // Note: refreshToken is not rotated by Cognito REFRESH_TOKEN_AUTH flow
+      const newExpiresAt = Date.now() + response.expiresIn * 1000;
+      await session.update({
+        ...session.data,
+        authTokens: {
+          ...authTokens,
+          accessToken: response.accessToken,
+          idToken: response.idToken,
+          expiresIn: response.expiresIn,
+          tokenType: response.tokenType,
+          expiresAt: newExpiresAt,
+        },
+      });
+
+      // Decode new ID token to get updated user info
+      let user: User | null = null;
+      if (response.idToken) {
+        const payload = decodeJwtPayload<IdTokenPayload>(response.idToken);
+        if (payload) {
+          user = extractUserFromIdToken(payload);
+        }
+      }
+
+      return {
+        success: true as const,
+        expiresAt: newExpiresAt,
+        user,
+      };
+    } catch (error) {
+      console.error('Error refreshing tokens:', error);
+      return {
+        success: false as const,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to refresh tokens. Please log in again.',
+      };
+    }
+  }
+);
+
+/**
+ * Server function to log out the user
+ *
+ * Clears all authentication data from the session.
+ */
+export const logout = createServerFn({ method: 'POST' }).handler(async () => {
+  const session = await useSession<SessionData>(sessionConfig);
+  await session.update({
+    cognitoSession: undefined,
+    redirectPath: undefined,
+    authTokens: undefined,
+    socialLogin: undefined,
+  });
+
+  return { success: true };
+});

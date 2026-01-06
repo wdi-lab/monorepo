@@ -1,75 +1,100 @@
-import { useState } from 'react';
-import {
-  Box,
-  Button,
-  CloseButton,
-  Dialog,
-  Flex,
-  HStack,
-  Portal,
-} from '@lib/ui';
+import { Avatar, Box, Button, Flex, HStack, Menu, Portal, Text } from '@lib/ui';
+import { Link } from '@tanstack/react-router';
+import { useCallback, useState } from 'react';
 import { CustomLink } from './CustomLink';
-import { LoginFormContainer } from './LoginFormContainer';
+import { useLoginModal } from '~/providers/LoginModalProvider';
+import { useAuth } from '~/providers/AuthProvider';
+import { getAuthStatus, logout } from '~/server/auth';
 
 export function Header() {
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const { openLoginModal, closeLoginModal } = useLoginModal();
+  const { user, isAuthenticated, onLoginSuccess, onLogout } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLoginSuccess = useCallback(async () => {
+    const status = await getAuthStatus();
+    if (status.isAuthenticated) {
+      // onLoginSuccess updates the query cache (single source of truth)
+      onLoginSuccess(status);
+      closeLoginModal();
+    }
+  }, [onLoginSuccess, closeLoginModal]);
+
+  const handleLogin = useCallback(() => {
+    openLoginModal({ onSuccess: handleLoginSuccess });
+  }, [openLoginModal, handleLoginSuccess]);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      // onLogout invalidates the query cache (single source of truth)
+      onLogout();
+      // Full page redirect - no need to update React state (would cause flicker)
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Logout failed:', error);
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
-    <>
-      <Box
-        as="header"
-        bg="blue.500"
-        color="white"
-        px={4}
-        borderBottom="1px solid"
-        borderColor="blue.600"
-      >
-        <Flex h={16} alignItems="center" justifyContent="space-between">
-          <HStack as="nav" gap={4} aria-label="Main navigation">
-            <CustomLink to="/">Home</CustomLink>
-            <CustomLink to="/about">About</CustomLink>
-          </HStack>
+    <Box
+      as="header"
+      bg="blue.500"
+      color="white"
+      px={4}
+      borderBottom="1px solid"
+      borderColor="blue.600"
+    >
+      <Flex h={16} alignItems="center" justifyContent="space-between">
+        <HStack as="nav" gap={4} aria-label="Main navigation">
+          <CustomLink to="/">Home</CustomLink>
+          <CustomLink to="/about">About</CustomLink>
+          <CustomLink to="/dashboard">Dashboard</CustomLink>
+        </HStack>
 
-          <Button
-            variant="subtle"
-            onClick={() => setIsLoginOpen(true)}
-            size="sm"
-          >
+        {isAuthenticated ? (
+          <Menu.Root>
+            <Menu.Trigger asChild>
+              <Button variant="ghost" size="sm" px={2}>
+                <HStack gap={2}>
+                  <Avatar.Root size="xs">
+                    {user?.picture && <Avatar.Image src={user.picture} />}
+                    <Avatar.Fallback>
+                      {user?.name?.[0] ?? user?.email?.[0] ?? '?'}
+                    </Avatar.Fallback>
+                  </Avatar.Root>
+                  <Text display={{ base: 'none', md: 'block' }}>
+                    {user?.name ?? user?.email ?? 'User'}
+                  </Text>
+                </HStack>
+              </Button>
+            </Menu.Trigger>
+            <Portal>
+              <Menu.Positioner>
+                <Menu.Content>
+                  <Menu.Item value="dashboard" asChild>
+                    <Link to="/dashboard">Dashboard</Link>
+                  </Menu.Item>
+                  <Menu.Separator />
+                  <Menu.Item
+                    value="logout"
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                  >
+                    {isLoggingOut ? 'Signing out...' : 'Sign Out'}
+                  </Menu.Item>
+                </Menu.Content>
+              </Menu.Positioner>
+            </Portal>
+          </Menu.Root>
+        ) : (
+          <Button variant="subtle" onClick={handleLogin} size="sm">
             Login
           </Button>
-        </Flex>
-      </Box>
-
-      <Portal>
-        <Dialog.Root
-          open={isLoginOpen}
-          onOpenChange={(e) => setIsLoginOpen(e.open)}
-          closeOnEscape={true}
-          closeOnInteractOutside={true}
-          placement="center"
-          size={{ mdDown: 'full', base: 'sm' }}
-        >
-          <Dialog.Backdrop />
-          <Dialog.Positioner>
-            <Dialog.Content>
-              <Dialog.CloseTrigger
-                position="absolute"
-                top="2"
-                insetEnd="2"
-                asChild
-              >
-                <CloseButton />
-              </Dialog.CloseTrigger>
-              <Dialog.Body p={{ base: 6, md: 8 }}>
-                <LoginFormContainer
-                  redirectPath="/"
-                  onSuccess={() => setIsLoginOpen(false)}
-                />
-              </Dialog.Body>
-            </Dialog.Content>
-          </Dialog.Positioner>
-        </Dialog.Root>
-      </Portal>
-    </>
+        )}
+      </Flex>
+    </Box>
   );
 }

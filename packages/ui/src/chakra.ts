@@ -35,6 +35,7 @@ export {
   Input,
   InputGroup,
   IconButton,
+  Menu,
   Portal,
   Textarea,
   Separator,

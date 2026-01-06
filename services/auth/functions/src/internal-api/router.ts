@@ -2,6 +2,7 @@ import { implement } from '@orpc/server';
 import { contract } from '@contract/internal-api/auth';
 import { withMagicLinkService } from './middleware/magic-link.ts';
 import { withSocialLoginService } from './middleware/social-login.ts';
+import { withTokenRefreshService } from './middleware/token-refresh.ts';
 
 // ============================================================================
 // Procedures
@@ -65,6 +66,18 @@ const completeSocialLogin = implement(contract.socialLogin.complete)
   });
 
 /**
+ * Refresh authentication tokens
+ *
+ * Uses Cognito REFRESH_TOKEN_AUTH flow to obtain new access and ID tokens.
+ * Uses withTokenRefreshService middleware to inject TokenRefreshService into context.
+ */
+const refreshTokens = implement(contract.tokens.refresh)
+  .use(withTokenRefreshService)
+  .handler(async ({ input, context }) => {
+    return context.tokenRefreshService.refresh(input);
+  });
+
+/**
  * Auth service internal API router implementing the contract
  */
 export const router = {
@@ -78,6 +91,9 @@ export const router = {
   socialLogin: {
     initiate: initiateSocialLogin,
     complete: completeSocialLogin,
+  },
+  tokens: {
+    refresh: refreshTokens,
   },
 };
 

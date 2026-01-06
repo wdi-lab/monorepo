@@ -227,7 +227,7 @@ Social Login enables users to authenticate using their existing accounts from th
 #### Setting Up Google OAuth
 
 1. Create OAuth credentials in [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
-2. Configure authorized redirect URIs: `https://your-domain.com/auth/social/callback`
+2. Configure authorized redirect URIs: `https://your-domain.com/auth/social-login`
 3. Set SST secrets:
 
 ```bash
