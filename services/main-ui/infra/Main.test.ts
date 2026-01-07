@@ -14,6 +14,7 @@ import {
   afterAll,
   beforeEach,
   afterEach,
+  vi,
 } from 'vitest';
 import { Template } from 'aws-cdk-lib/assertions';
 import { initProject } from 'sst/project.js';
@@ -22,6 +23,29 @@ import { Main } from './Main.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+// Mock account-specific helpers to avoid validation in tests
+vi.mock('@lib/sst-helpers', () => ({
+  dns: {
+    mainDomain: vi.fn(() => 'test.example.com'),
+    mainHostedZone: vi.fn(() => 'example.com'),
+  },
+  envConfig: {
+    getParameterName: vi.fn(() => '/test/certificate/arn'),
+  },
+  serviceConfig: {
+    getParameterValue: vi.fn(() => 'test-api-id'),
+    getParameterName: vi.fn(() => '/service/test/param'),
+    getParameterArn: vi.fn(
+      () => 'arn:aws:ssm:us-east-1:123456789012:parameter/service/test/param'
+    ),
+  },
+  ssm: {
+    getCrossRegionParameterValue: vi.fn(
+      () => 'arn:aws:acm:us-east-1:123456789012:certificate/test-cert-id'
+    ),
+  },
+}));
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

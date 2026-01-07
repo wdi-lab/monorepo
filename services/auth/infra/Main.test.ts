@@ -5,14 +5,37 @@ import { initProject } from 'sst/project.js';
 import { App, getStack, StackContext } from 'sst/constructs';
 import { Main } from './Main.ts';
 
-// Mock only removalPolicy to avoid account validation in tests
-// serviceConfig uses actual implementation
+// Mock account-specific helpers to avoid validation in tests
 vi.mock('@lib/sst-helpers', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@lib/sst-helpers')>();
   return {
     ...actual,
     removalPolicy: {
       retainForPermanentStage: () => RemovalPolicy.DESTROY,
+    },
+    dns: {
+      mainDomain: vi.fn(() => 'test.example.com'),
+      mainHostedZone: vi.fn(() => 'example.com'),
+    },
+    env: {
+      accountEnv: vi.fn(() => 'DEV'),
+    },
+    envConfig: {
+      getValue: vi.fn((_ctx, opts) => {
+        // Return valid ARN for KMS key
+        if (opts?.path?.includes('kms')) {
+          return 'arn:aws:kms:us-east-1:123456789012:key/test-key-id';
+        }
+        // Return valid email domain
+        if (opts?.path?.includes('email')) {
+          return 'example.com';
+        }
+        return 'mock-value';
+      }),
+    },
+    serviceConfig: {
+      ...actual.serviceConfig,
+      getParameterValue: vi.fn(() => 'test-api-id'),
     },
   };
 });
