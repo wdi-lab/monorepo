@@ -49,6 +49,7 @@ export function Main(context: StackContext, props?: MainProps) {
       deploy: false,
       url: 'http://localhost:3000',
     },
+    nodejs: { esbuild: { keepNames: false } },
     bind: [authInternalApiUrl, cognitoUserPoolId, cognitoClientId],
     permissions: [
       new iam.PolicyStatement({
