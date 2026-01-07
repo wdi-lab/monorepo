@@ -1,7 +1,8 @@
 import { StackContext } from 'sst/constructs';
 import { NitroSite, ServiceConfig } from '@lib/sst-constructs';
-import { serviceConfig } from '@lib/sst-helpers';
+import { dns, envConfig, serviceConfig, ssm } from '@lib/sst-helpers';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 
 export interface MainProps {
   appPath?: string;
@@ -30,6 +31,17 @@ export function Main(context: StackContext, props?: MainProps) {
     path: 'auth/cognito-client-id',
   });
 
+  const certificateParameterName = envConfig.getParameterName({
+    path: 'certificate/arn',
+    id: 'main',
+  });
+
+  // Read certificate ARN from us-east-1 region using cross-region SSM helper
+  const certificateArn = ssm.getCrossRegionParameterValue(context, {
+    parameterName: certificateParameterName,
+    region: 'us-east-1',
+  });
+
   const mainSite = new NitroSite(stack, 'MainSite', {
     path: appPath,
     buildCommand: 'pnpm build:app',
@@ -47,9 +59,20 @@ export function Main(context: StackContext, props?: MainProps) {
         ],
       }),
     ],
+    customDomain: {
+      domainName: dns.mainDomain(context),
+      hostedZone: dns.mainHostedZone(context),
+      cdk: {
+        certificate: acm.Certificate.fromCertificateArn(
+          stack,
+          'SiteCertificate',
+          certificateArn
+        ),
+      },
+    },
   });
 
   stack.addOutputs({
-    MainSiteUrl: mainSite.url,
+    MainSiteUrl: mainSite.customDomainUrl,
   });
 }

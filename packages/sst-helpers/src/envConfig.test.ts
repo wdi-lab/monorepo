@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { initProject } from 'sst/project.js';
 import { App, StackContext } from 'sst/constructs';
-import { getValue, type EnvPath } from './envConfig.js';
+import { getValue, getParameterName, type EnvPath } from './envConfig.js';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 
 describe('envConfig', () => {
@@ -155,6 +155,86 @@ describe('envConfig', () => {
       await app.finish();
 
       expect(true).toBe(true);
+    });
+  });
+
+  describe('getParameterName', () => {
+    it('returns correct parameter name with namespace/key/id', () => {
+      const result = getParameterName({
+        namespace: 'email-identity',
+        key: 'arn',
+        id: 'prod',
+      });
+
+      expect(result).toBe('/config/email-identity/prod/arn');
+    });
+
+    it('returns correct parameter name with path and id', () => {
+      const result = getParameterName({
+        path: 'kms/key-arn' as EnvPath,
+        id: 'dev',
+      });
+
+      expect(result).toBe('/config/kms/dev/key-arn');
+    });
+
+    it('handles all namespaces correctly', () => {
+      expect(
+        getParameterName({
+          namespace: 'email-identity',
+          key: 'name',
+          id: 'test',
+        })
+      ).toBe('/config/email-identity/test/name');
+
+      expect(
+        getParameterName({
+          namespace: 'hosted-zone',
+          key: 'id',
+          id: 'staging',
+        })
+      ).toBe('/config/hosted-zone/staging/id');
+
+      expect(
+        getParameterName({
+          namespace: 'kms',
+          key: 'alias',
+          id: 'prod',
+        })
+      ).toBe('/config/kms/prod/alias');
+
+      expect(
+        getParameterName({
+          namespace: 'certificate',
+          key: 'arn',
+          id: 'main',
+        })
+      ).toBe('/config/certificate/main/arn');
+
+      expect(
+        getParameterName({
+          namespace: 'vpc',
+          key: 'id',
+          id: 'default',
+        })
+      ).toBe('/config/vpc/default/id');
+    });
+
+    it('handles custom id values', () => {
+      expect(
+        getParameterName({
+          namespace: 'kms',
+          key: 'key-id',
+          id: 'my-custom-id-123',
+        })
+      ).toBe('/config/kms/my-custom-id-123/key-id');
+
+      expect(
+        getParameterName({
+          path: 'vpc/id' as EnvPath,
+          id: 'user@example.com',
+        })
+      ).toBe('/config/vpc/user@example.com/id');
     });
   });
 });

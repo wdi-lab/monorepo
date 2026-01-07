@@ -4,6 +4,6 @@ export const AWS_ACCOUNTS = {
 } as const;
 
 export const MAIN_HOSTED_ZONES = {
-  DEV: 'dev.hi.wdi-lab.com',
-  PROD: 'prod.hi.wdi-lab.com',
+  DEV: 'dev.wdi-lab.com',
+  PROD: 'prod.wdi-lab.com',
 };

@@ -2,7 +2,7 @@ import { Api, Config, StackContext, toCdkDuration } from 'sst/constructs';
 import { HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as kms from 'aws-cdk-lib/aws-kms';
-import { serviceConfig, envConfig } from '@lib/sst-helpers';
+import { serviceConfig, envConfig, dns, env } from '@lib/sst-helpers';
 import { UserPool } from './cognito/UserPool.ts';
 import { CognitoTriggers } from './cognito/CognitoTriggers.ts';
 import { MagicLink } from './cognito/MagicLink.ts';
@@ -22,20 +22,11 @@ export function Main(context: StackContext) {
     id: 'main',
   });
 
-  // Determine allowed origins based on stage
-  const mainUiUrl =
-    app.stage === 'production'
-      ? 'https://app.example.com' // TODO: Replace with your production domain
-      : `https://${app.stage}.example.com`; // TODO: Replace with your staging domain pattern
-
-  // For local development, allow localhost
-  // For non-production stages, also allow localhost for local testing
-  const allowedOrigins =
-    app.stage === 'local'
-      ? ['http://localhost:3000']
-      : app.stage === 'production'
-        ? [mainUiUrl]
-        : [mainUiUrl, 'http://localhost:3000'];
+  // For dev and preview stages, allow localhost origin for testing
+  const allowedOrigins = [
+    `https://${dns.mainDomain(context)}`,
+    ...(env.accountEnv(context) === 'DEV' ? ['http://localhost:3000'] : []),
+  ];
 
   const mainUserPool = new UserPool(stack, 'main', {
     clients: {

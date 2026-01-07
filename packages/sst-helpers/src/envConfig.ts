@@ -21,6 +21,9 @@ const _ENV_CONFIG_MAPPING = {
     KEY_ID: 'key-id',
     ALIAS: 'alias',
   },
+  certificate: {
+    ARN: 'arn',
+  },
   vpc: {
     ID: 'id',
   },
@@ -106,12 +109,18 @@ export const getValue = <N extends EnvNamespaceValue>(
   options: Get_ENV_CONFIG_MAPPINGOptions<N>
 ): string => {
   const { stack } = context;
-  const { namespace, key } = resolveNamespaceKey(options);
-
-  const parameterName = `/config/${namespace}/${options.id}/${key}`;
+  const parameterName = getParameterName(options);
 
   return StringParameter.valueForStringParameter(
     options.scope ?? stack,
     parameterName
   );
+};
+
+export const getParameterName = <N extends EnvNamespaceValue>(
+  options: Get_ENV_CONFIG_MAPPINGOptions<N>
+): string => {
+  const { namespace, key } = resolveNamespaceKey(options);
+
+  return `/config/${namespace}/${options.id}/${key}`;
 };
