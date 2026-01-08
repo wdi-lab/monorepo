@@ -3,6 +3,7 @@ import { HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import { serviceConfig, envConfig, dns, env } from '@lib/sst-helpers';
+import { GlobalTable } from '@lib/sst-constructs';
 import { UserPool } from './cognito/UserPool.ts';
 import { CognitoTriggers } from './cognito/CognitoTriggers.ts';
 import { MagicLink } from './cognito/MagicLink.ts';
@@ -63,6 +64,23 @@ export function Main(context: StackContext) {
     value: userPoolClient.userPoolClientId,
   });
 
+  // Create auth global DynamoDB table
+  const mainTable = new GlobalTable(stack, 'mainTable', {
+    fields: {
+      pk: 'string',
+      sk: 'string',
+      gsi1pk: 'string',
+      gsi1sk: 'string',
+    },
+    primaryIndex: { partitionKey: 'pk', sortKey: 'sk' },
+    globalIndexes: {
+      gsi1: { partitionKey: 'gsi1pk', sortKey: 'gsi1sk' },
+    },
+    // Add replicas for global table functionality
+    // Uncomment and configure regions as needed:
+    // replicas: ['us-east-1', 'eu-west-1'],
+  });
+
   // Import the shared internal API from shared-infra service
   const internalApiId = serviceConfig.getParameterValue(context, {
     path: 'shared-infra/internal-api-id',
@@ -90,7 +108,7 @@ export function Main(context: StackContext) {
         function: {
           handler: 'functions/src/internal-api/handler.handler',
           runtime: 'nodejs22.x',
-          bind: [cognitoUserPoolId, cognitoClientId],
+          bind: [cognitoUserPoolId, cognitoClientId, mainTable],
           permissions: [
             new iam.PolicyStatement({
               effect: iam.Effect.ALLOW,
@@ -159,6 +177,7 @@ export function Main(context: StackContext) {
     UserPoolId: mainUserPool.userPool.userPoolId,
     UserPoolClientId: userPoolClient.userPoolClientId,
     MagicLinkSecretsTable: magicLink.secretsTable.tableName,
+    MainTableName: mainTable.tableName,
     AllowedOrigins: allowedOrigins.join(','),
   });
 }

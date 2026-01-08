@@ -435,6 +435,9 @@ importers:
       '@infra/shared-infra':
         specifier: workspace:*
         version: link:../shared-infra
+      '@lib/sst-constructs':
+        specifier: workspace:*
+        version: link:../../packages/sst-constructs
       '@lib/sst-helpers':
         specifier: workspace:*
         version: link:../../packages/sst-helpers
