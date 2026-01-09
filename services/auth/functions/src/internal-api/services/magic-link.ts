@@ -7,6 +7,7 @@ import {
 import { calculateSecretHash } from '../utils/cognito.ts';
 import { getCognitoConfig } from '../utils/cognito-config.ts';
 import type { CognitoContextData } from '@contract/internal-api/auth';
+import { UserService } from './user.ts';
 
 // ============================================================================
 // Types
@@ -52,10 +53,12 @@ export interface CompleteMagicLinkOutput {
 export class MagicLinkService {
   private cognito: CognitoIdentityProviderClient;
   private config: MagicLinkConfig;
+  private userService: UserService;
 
-  constructor(config: MagicLinkConfig) {
+  constructor(config: MagicLinkConfig, userService: UserService) {
     this.config = config;
     this.cognito = new CognitoIdentityProviderClient({});
+    this.userService = userService;
   }
 
   /**
@@ -63,6 +66,9 @@ export class MagicLinkService {
    *
    * This starts the Cognito custom auth flow and triggers the Lambda
    * to send a magic link email to the user.
+   *
+   * The user is created in both the database and Cognito before initiating
+   * the auth flow, ensuring the user exists when the magic link is sent.
    */
   async initiate(
     input: InitiateMagicLinkInput
@@ -70,6 +76,12 @@ export class MagicLinkService {
     const { username, redirectUri, contextData } = input;
 
     try {
+      // Only create user if this is a new magic link request (not a retry with existing link)
+      // and username is an email address
+      if (!input.alreadyHaveMagicLink && username.includes('@')) {
+        await this.userService.findOrCreateUser(username);
+      }
+
       // Calculate SECRET_HASH for client authentication
       const secretHash = calculateSecretHash(
         username,
@@ -196,6 +208,9 @@ export class MagicLinkService {
         throw new Error('Invalid magic link or session expired');
       }
 
+      // Mark email as verified in DB after successful authentication
+      await this.userService.setEmailVerified(username);
+
       return {
         accessToken: response.AuthenticationResult.AccessToken,
         idToken: response.AuthenticationResult.IdToken,
@@ -225,5 +240,6 @@ export class MagicLinkService {
  */
 export async function createMagicLinkService(): Promise<MagicLinkService> {
   const config = await getCognitoConfig();
-  return new MagicLinkService(config);
+  const userService = new UserService(config);
+  return new MagicLinkService(config, userService);
 }

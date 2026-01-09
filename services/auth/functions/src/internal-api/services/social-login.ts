@@ -12,15 +12,10 @@
 import * as client from 'openid-client';
 import {
   CognitoIdentityProviderClient,
-  AdminGetUserCommand,
-  AdminCreateUserCommand,
-  AdminSetUserPasswordCommand,
   AdminInitiateAuthCommand,
   AdminRespondToAuthChallengeCommand,
-  UserNotFoundException,
   type ContextDataType,
 } from '@aws-sdk/client-cognito-identity-provider';
-import { randomUUID } from 'crypto';
 import { calculateSecretHash } from '../utils/cognito.ts';
 import {
   getCognitoConfig,
@@ -32,6 +27,7 @@ import {
   getEnabledProviders,
 } from '../../shared/social-providers.ts';
 import type { CognitoContextData } from '@contract/internal-api/auth';
+import { UserService } from './user.ts';
 
 // ============================================================================
 // Types
@@ -78,14 +74,17 @@ export class SocialLoginService {
   private cognitoConfig: CognitoConfig;
   private providers: Map<SocialProvider, ProviderRuntimeConfig>;
   private clientConfigs: Map<SocialProvider, client.Configuration> = new Map();
+  private userService: UserService;
 
   constructor(
     cognitoConfig: CognitoConfig,
-    providers: Map<SocialProvider, ProviderRuntimeConfig>
+    providers: Map<SocialProvider, ProviderRuntimeConfig>,
+    userService: UserService
   ) {
     this.cognitoConfig = cognitoConfig;
     this.providers = providers;
     this.cognito = new CognitoIdentityProviderClient({});
+    this.userService = userService;
   }
 
   /**
@@ -205,58 +204,28 @@ export class SocialLoginService {
       throw new Error(`Missing sub claim from ${input.provider} ID token`);
     }
 
-    // Find or create Cognito user, then issue tokens
-    await this.findOrCreateUser(email);
+    // Extract additional user info from claims
+    const givenName = claims.given_name as string | undefined;
+    const familyName = claims.family_name as string | undefined;
 
-    return this.issueCognitoTokens(
+    // Find or create user in DB and Cognito, then issue tokens
+    // email is treated as the username for lookup
+    await this.userService.findOrCreateUser(email, {
+      firstName: givenName,
+      lastName: familyName,
+    });
+
+    const cognitoTokens = await this.issueCognitoTokens(
       email,
       socialIdToken,
       input.provider,
       input.contextData
     );
-  }
 
-  /**
-   * Find existing user by email or create new user
-   */
-  private async findOrCreateUser(email: string): Promise<{ username: string }> {
-    try {
-      await this.cognito.send(
-        new AdminGetUserCommand({
-          UserPoolId: this.cognitoConfig.userPoolId,
-          Username: email,
-        })
-      );
+    // Mark email as verified in DB after successful authentication
+    await this.userService.setEmailVerified(email);
 
-      return { username: email };
-    } catch (error) {
-      if (error instanceof UserNotFoundException) {
-        await this.cognito.send(
-          new AdminCreateUserCommand({
-            UserPoolId: this.cognitoConfig.userPoolId,
-            Username: randomUUID(),
-            UserAttributes: [
-              { Name: 'email', Value: email },
-              { Name: 'email_verified', Value: 'true' },
-            ],
-            MessageAction: 'SUPPRESS',
-          })
-        );
-
-        const randomPassword = randomUUID() + 'Aa1!';
-        await this.cognito.send(
-          new AdminSetUserPasswordCommand({
-            UserPoolId: this.cognitoConfig.userPoolId,
-            Username: email,
-            Password: randomPassword,
-            Permanent: true,
-          })
-        );
-
-        return { username: email };
-      }
-      throw error;
-    }
+    return cognitoTokens;
   }
 
   /**
@@ -347,5 +316,6 @@ export async function createSocialLoginService(): Promise<SocialLoginService> {
     );
   }
 
-  return new SocialLoginService(cognitoConfig, providers);
+  const userService = new UserService(cognitoConfig);
+  return new SocialLoginService(cognitoConfig, providers, userService);
 }

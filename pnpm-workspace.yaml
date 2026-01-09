@@ -25,6 +25,8 @@ catalog:
   '@testing-library/user-event': ^14.6.1
   '@types/aws-lambda': ^8.10.159
   '@types/node': ^22
+  electrodb: ^3.3.1
+  ulid: ^2.3.0
   '@types/react': ^19.2.7
   '@types/react-dom': ^19.2.3
   '@vitest/browser-playwright': ^4.0.16

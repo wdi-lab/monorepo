@@ -18,4 +18,10 @@ declare module 'sst/node/config' {
       value: string;
     };
   }
+
+  export interface GlobalTableResources {
+    mainTable: {
+      tableName: string;
+    };
+  }
 }

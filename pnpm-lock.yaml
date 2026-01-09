@@ -78,6 +78,9 @@ catalogs:
     constructs:
       specifier: 10.3.0
       version: 10.3.0
+    electrodb:
+      specifier: ^3.3.1
+      version: 3.5.3
     eslint:
       specifier: ^9.39.2
       version: 9.39.2
@@ -102,6 +105,9 @@ catalogs:
     typescript:
       specifier: ^5.9.3
       version: 5.9.3
+    ulid:
+      specifier: ^2.3.0
+      version: 2.4.0
     vite:
       specifier: ^7.1.7
       version: 7.3.0
@@ -502,6 +508,9 @@ importers:
       aws-jwt-verify:
         specifier: ^5.1.1
         version: 5.1.1
+      electrodb:
+        specifier: 'catalog:'
+        version: 3.5.3(@aws-sdk/client-dynamodb@3.958.0(aws-crt@1.28.1))
       express:
         specifier: ^4
         version: 4.22.1
@@ -511,6 +520,9 @@ importers:
       serverless-http:
         specifier: ^4.0.0
         version: 4.0.0
+      ulid:
+        specifier: 'catalog:'
+        version: 2.4.0
       zod:
         specifier: 'catalog:'
         version: 4.2.1
@@ -4725,6 +4737,9 @@ packages:
   ee-first@1.1.1:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
 
+  electrodb@3.5.3:
+    resolution: {integrity: sha512-cDrp4zVHiFCHF2e0B3xLrIwSKCGXmHlF6OKyw+BUb0+CRP3zHHYiikJ42c/j+3krkHLAoQ1IlNlAfLmLdcAYRQ==}
+
   electron-to-chromium@1.5.267:
     resolution: {integrity: sha512-0Drusm6MVRXSOJpGbaSVgcQsuB4hEkMpHXaVstcPmhu5LIedxs1xNK/nIxmQIU/RPC0+1/o0AVZfBTkTNJOdUw==}
 
@@ -5646,6 +5661,9 @@ packages:
 
   jsonfile@6.2.0:
     resolution: {integrity: sha512-FGuPw30AdOIUTRMC2OMRtQV+jkVj2cfPqSeWXv1NEAJ1qZ5zb1X6z1mFhbfOB/iy3ssJCD+3KuZ8r8C3uVFlAg==}
+
+  jsonschema@1.2.7:
+    resolution: {integrity: sha512-3dFMg9hmI9LdHag/BRIhMefCfbq1hicvYMy8YhZQorAdzOzWz7NjniSpn39yjpzUAMIWtGyyZuH2KNBloH7ZLw==}
 
   jsx-ast-utils@3.3.5:
     resolution: {integrity: sha512-ZZow9HBI5O6EPgSJLUb8n2NKgmVWTwCvHGwFuJlMjvLFqlGG6pjirPhtdsseaLZjSibD8eegzmYpUZwoIlj2cQ==}
@@ -7038,6 +7056,10 @@ packages:
 
   ufo@1.6.1:
     resolution: {integrity: sha512-9a4/uxlTWJ4+a5i0ooc1rU7C7YOw3wT+UGqdeNNHWnOF9qcMBgLRS+4IYUqbczewFx4mLEig6gawh7X6mFlEkA==}
+
+  ulid@2.4.0:
+    resolution: {integrity: sha512-fIRiVTJNcSRmXKPZtGzFQv9WRrZ3M9eoptl/teFJvjOzmpU+/K/JH6HZ8deBfb5vMEpicJcLn7JmvdknlMq7Zg==}
+    hasBin: true
 
   unbox-primitive@1.1.0:
     resolution: {integrity: sha512-nWJ91DjeOkej/TA8pXQ3myruKpKEYgqvpw9lz4OPHj/NWFNluYrjbz9j01CJ8yKQd2g4jFoOkINCTW2I5LEEyw==}
@@ -14117,6 +14139,14 @@ snapshots:
 
   ee-first@1.1.1: {}
 
+  electrodb@3.5.3(@aws-sdk/client-dynamodb@3.958.0(aws-crt@1.28.1)):
+    dependencies:
+      '@aws-sdk/lib-dynamodb': 3.958.0(@aws-sdk/client-dynamodb@3.958.0(aws-crt@1.28.1))
+      '@aws-sdk/util-dynamodb': 3.958.0(@aws-sdk/client-dynamodb@3.958.0(aws-crt@1.28.1))
+      jsonschema: 1.2.7
+    transitivePeerDependencies:
+      - '@aws-sdk/client-dynamodb'
+
   electron-to-chromium@1.5.267: {}
 
   emoji-regex@8.0.0: {}
@@ -15245,6 +15275,8 @@ snapshots:
       universalify: 2.0.1
     optionalDependencies:
       graceful-fs: 4.2.11
+
+  jsonschema@1.2.7: {}
 
   jsx-ast-utils@3.3.5:
     dependencies:
@@ -16896,6 +16928,8 @@ snapshots:
   typescript@5.9.3: {}
 
   ufo@1.6.1: {}
+
+  ulid@2.4.0: {}
 
   unbox-primitive@1.1.0:
     dependencies:

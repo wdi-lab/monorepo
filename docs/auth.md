@@ -10,6 +10,7 @@ Comprehensive guide to the authentication architecture, design decisions, and im
 - [Service Communication](#service-communication)
 - [Infrastructure Patterns](#infrastructure-patterns)
 - [Security Model](#security-model)
+- [User Database](#user-database)
 - [Social Login](#social-login)
 - [Client-Side Session Management](#client-side-session-management)
 - [Related Documentation](#related-documentation)
@@ -368,6 +369,98 @@ sequenceDiagram
    - Client (routes): Extract hash, display loading/success/error UI
    - Server (server functions): All processing logic, cookie management, auth API calls
    - Auth service: Cognito operations
+
+## User Database
+
+The auth service maintains its own user database in DynamoDB, separate from Cognito. This provides a canonical user identity that can span multiple Cognito user pools across regions.
+
+### User Entity
+
+| Field           | Type              | Description                                |
+| --------------- | ----------------- | ------------------------------------------ |
+| `id`            | string (ULID)     | Primary identifier, auto-generated         |
+| `email`         | string            | User's email address (unique)              |
+| `firstName`     | string (optional) | User's first name                          |
+| `lastName`      | string (optional) | User's last name                           |
+| `emailVerified` | boolean           | Whether email is verified (default: false) |
+| `cognitoUsers`  | array             | Cognito user pool entries (see below)      |
+| `version`       | number            | Optimistic locking version                 |
+
+### Cognito User Tracking
+
+Each user can exist in multiple Cognito user pools (e.g., different regions). The `cognitoUsers` array tracks these:
+
+```typescript
+interface CognitoUserEntry {
+  userPoolId: string; // e.g., "us-east-1_ABC123"
+  sub: string; // Cognito's unique identifier for the user
+  region: string; // AWS region of the user pool
+}
+```
+
+### DB User ID as Cognito Username
+
+**Important**: The database user `id` (ULID) is used as the Cognito `Username`. This design choice:
+
+1. **Enables consistent lookup** - Given a DB user, we can always find them in Cognito by their `id`
+2. **Decouples email from username** - Email changes don't affect Cognito identity
+3. **Supports multi-pool scenarios** - Same user ID across regional user pools
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    User Identity Relationship                        │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│   DynamoDB (User Table)              Cognito User Pool               │
+│   ┌─────────────────────┐           ┌─────────────────────┐         │
+│   │ id: "01HXK..."      │──────────▶│ Username: "01HXK..."│         │
+│   │ email: "a@b.com"    │           │ email: "a@b.com"    │         │
+│   │ cognitoUsers: [     │◀──────────│ sub: "abc-123-..."  │         │
+│   │   { userPoolId,     │           └─────────────────────┘         │
+│   │     sub, region }   │                                            │
+│   │ ]                   │                                            │
+│   └─────────────────────┘                                            │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### User Creation Flow
+
+User creation happens at the **initiation** phase of authentication flows, before any auth challenges are sent:
+
+**Magic Link:**
+
+1. User requests magic link → `initiate()` is called
+2. **Find or create DB user** - Look up by email, create if not exists (returns full `User` object)
+3. **Ensure Cognito user** - Sync user to Cognito (see below)
+4. Cognito sends magic link email
+5. User clicks link → `complete()` verifies and returns tokens
+6. **Mark email verified** - `setEmailVerified(idOrEmail)` updates DB (accepts ID or email)
+
+**Social Login:**
+
+1. User clicks "Sign in with Google" → redirect to provider
+2. Provider redirects back with auth code → `complete()` is called
+3. Exchange code for provider tokens, validate ID token
+4. **Find or create DB user** - Look up by email from ID token (returns full `User` object)
+5. **Ensure Cognito user** - Sync user to Cognito (see below)
+6. Issue Cognito tokens
+7. **Mark email verified** - `setEmailVerified(idOrEmail)` updates DB (accepts ID or email)
+
+**Ensure Cognito User (shared logic):**
+
+1. Check if `cognitoUsers` already contains entry for this pool → skip if yes
+2. If not tracked, check Cognito via `AdminGetUser` using DB user `id`
+3. If not in Cognito, create via `AdminCreateUser` with DB user `id` as username
+4. Track the mapping - Add `{ userPoolId, sub, region }` to `cognitoUsers` array
+
+### Key Files
+
+| File                                                        | Purpose                                 |
+| ----------------------------------------------------------- | --------------------------------------- |
+| `services/auth/functions/src/db/main/entities/user.ts`      | User entity schema (ElectroDB)          |
+| `services/auth/functions/src/db/main/user-repository.ts`    | Repository with CRUD operations         |
+| `services/auth/functions/src/internal-api/services/user.ts` | UserService for Cognito synchronization |
 
 ## Social Login
 

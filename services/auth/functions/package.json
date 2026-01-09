@@ -15,9 +15,7 @@
     "lint": "eslint \"**/*.ts*\"",
     "type-check": "tsc --noEmit",
     "test": "vitest",
-    "test:run": "vitest run",
-    "test:unit": "vitest --config vitest.unit.config.ts",
-    "test:unit:run": "vitest run --config vitest.unit.config.ts"
+    "test:run": "vitest run"
   },
   "dependencies": {
     "@lib/sst-constructs": "workspace:*",
@@ -30,6 +28,8 @@
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "zod": "catalog:",
+    "electrodb": "catalog:",
+    "ulid": "catalog:",
     "express": "^4",
     "aws-jwt-verify": "^5.1.1",
     "openid-client": "^6.1.3",

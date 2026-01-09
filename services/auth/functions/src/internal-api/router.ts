@@ -3,6 +3,10 @@ import { contract } from '@contract/internal-api/auth';
 import { withMagicLinkService } from './middleware/magic-link.ts';
 import { withSocialLoginService } from './middleware/social-login.ts';
 import { withTokenRefreshService } from './middleware/token-refresh.ts';
+import {
+  userRepository,
+  UserNotFoundError,
+} from '../db/main/user-repository.ts';
 
 // ============================================================================
 // Procedures
@@ -10,12 +14,20 @@ import { withTokenRefreshService } from './middleware/token-refresh.ts';
 
 /**
  * Implement the auth contract's getUser procedure
+ *
+ * Retrieves user data from DynamoDB using ElectroDB.
+ * Throws a 404-equivalent error if user is not found.
  */
 const getUser = implement(contract.user.get).handler(async ({ input }) => {
-  // TODO: Implement actual user lookup logic
+  const user = await userRepository.getById(input.id);
+
+  if (!user) {
+    throw new UserNotFoundError(input.id);
+  }
+
   return {
-    id: input.id,
-    email: 'user@example.com',
+    id: user.id,
+    email: user.email,
   };
 });
 

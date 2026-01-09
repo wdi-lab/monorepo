@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mockClient } from 'aws-sdk-client-mock';
 import {
   CognitoIdentityProviderClient,
@@ -6,19 +6,52 @@ import {
   AdminRespondToAuthChallengeCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 import { MagicLinkService } from './magic-link.ts';
+import { UserService } from './user.ts';
+
+// Mock UserService
+vi.mock('./user.ts', () => ({
+  UserService: vi.fn().mockImplementation(() => ({
+    findOrCreateUser: vi.fn().mockResolvedValue({
+      id: 'ulid-123',
+      email: 'test@example.com',
+      version: 1,
+      emailVerified: false,
+      cognitoUsers: [],
+    }),
+    setEmailVerified: vi.fn().mockResolvedValue(undefined),
+  })),
+}));
 
 const cognitoMock = mockClient(CognitoIdentityProviderClient);
 
 describe('MagicLinkService', () => {
   let service: MagicLinkService;
+  let mockUserService: {
+    findOrCreateUser: ReturnType<typeof vi.fn>;
+    setEmailVerified: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     cognitoMock.reset();
-    service = new MagicLinkService({
-      userPoolId: 'us-east-1_TEST123',
-      clientId: 'test-client-id',
-      clientSecret: 'test-client-secret',
-    });
+    vi.clearAllMocks();
+    mockUserService = {
+      findOrCreateUser: vi.fn().mockResolvedValue({
+        id: 'ulid-123',
+        email: 'test@example.com',
+        version: 1,
+        emailVerified: false,
+        cognitoUsers: [],
+      }),
+      setEmailVerified: vi.fn().mockResolvedValue(undefined),
+    };
+    service = new MagicLinkService(
+      {
+        userPoolId: 'us-east-1_TEST123',
+        clientId: 'test-client-id',
+        clientSecret: 'test-client-secret',
+      },
+      mockUserService as unknown as UserService
+    );
   });
 
   describe('initiate', () => {
@@ -44,6 +77,9 @@ describe('MagicLinkService', () => {
         session: 'challenge-session-token',
         message: 'Magic link sent to your email. Please check your inbox.',
       });
+
+      // Verify UserService.findOrCreateUser was called before Cognito calls
+      expect(mockUserService.findOrCreateUser).toHaveBeenCalledWith(email);
 
       // Verify AdminInitiateAuth was called correctly
       const initiateCalls = cognitoMock.commandCalls(AdminInitiateAuthCommand);
@@ -111,6 +147,61 @@ describe('MagicLinkService', () => {
         service.initiate({ username: email, redirectUri })
       ).rejects.toThrow('Failed to send magic link. Please try again.');
     });
+
+    it('should skip user creation when alreadyHaveMagicLink is true', async () => {
+      const email = 'test@example.com';
+      const redirectUri = 'https://example.com/auth/magic-link';
+
+      cognitoMock.on(AdminInitiateAuthCommand).resolves({
+        Session: 'initial-session-token',
+        ChallengeName: 'CUSTOM_CHALLENGE',
+      });
+
+      const result = await service.initiate({
+        username: email,
+        redirectUri,
+        alreadyHaveMagicLink: true,
+      });
+
+      expect(result).toEqual({
+        session: 'initial-session-token',
+        message: 'Please check your email for the magic link to continue.',
+      });
+
+      // Verify findOrCreateUser was NOT called when alreadyHaveMagicLink is true
+      expect(mockUserService.findOrCreateUser).not.toHaveBeenCalled();
+
+      // Verify AdminRespondToAuthChallenge was NOT called (early return)
+      const challengeCalls = cognitoMock.commandCalls(
+        AdminRespondToAuthChallengeCommand
+      );
+      expect(challengeCalls).toHaveLength(0);
+    });
+
+    it('should skip user creation when username is not an email', async () => {
+      const username = 'not-an-email';
+      const redirectUri = 'https://example.com/auth/magic-link';
+
+      cognitoMock.on(AdminInitiateAuthCommand).resolves({
+        Session: 'initial-session-token',
+        ChallengeName: 'CUSTOM_CHALLENGE',
+      });
+
+      cognitoMock.on(AdminRespondToAuthChallengeCommand).resolves({
+        Session: 'challenge-session-token',
+        ChallengeName: 'CUSTOM_CHALLENGE',
+      });
+
+      const result = await service.initiate({ username, redirectUri });
+
+      expect(result).toEqual({
+        session: 'challenge-session-token',
+        message: 'Magic link sent to your email. Please check your inbox.',
+      });
+
+      // Verify findOrCreateUser was NOT called when username is not an email
+      expect(mockUserService.findOrCreateUser).not.toHaveBeenCalled();
+    });
   });
 
   describe('complete', () => {
@@ -140,6 +231,15 @@ describe('MagicLinkService', () => {
         expiresIn: 3600,
         tokenType: 'Bearer',
       });
+
+      // Verify UserService.findOrCreateUser was NOT called in complete
+      // (user creation happens in initiate)
+      expect(mockUserService.findOrCreateUser).not.toHaveBeenCalled();
+
+      // Verify setEmailVerified was called after successful authentication
+      expect(mockUserService.setEmailVerified).toHaveBeenCalledWith(
+        'test@example.com'
+      );
 
       // Verify AdminRespondToAuthChallenge was called correctly
       const challengeCalls = cognitoMock.commandCalls(
@@ -189,6 +289,15 @@ describe('MagicLinkService', () => {
         expiresIn: 3600,
         tokenType: 'Bearer',
       });
+
+      // Verify UserService.findOrCreateUser was NOT called in complete
+      // (user creation happens in initiate)
+      expect(mockUserService.findOrCreateUser).not.toHaveBeenCalled();
+
+      // Verify setEmailVerified was called after successful authentication
+      expect(mockUserService.setEmailVerified).toHaveBeenCalledWith(
+        'test@example.com'
+      );
 
       // Verify AdminRespondToAuthChallenge was called with redirectUri in metadata
       const challengeCalls = cognitoMock.commandCalls(
