@@ -151,6 +151,7 @@ export class SocialLoginService {
       state,
       code_challenge: input.codeChallenge,
       code_challenge_method: 'S256',
+      response_mode: 'form_post',
     });
 
     return { authUrl: authUrl.href, state };

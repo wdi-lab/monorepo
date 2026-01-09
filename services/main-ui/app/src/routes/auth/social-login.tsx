@@ -1,19 +1,63 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { createServerFn } from '@tanstack/react-start';
 import { useEffect, useState } from 'react';
 import * as z from 'zod';
+import { getRequest } from '@tanstack/react-start/server';
 import { Box, Card, Center, Heading, Spinner, Text, VStack } from '@lib/ui';
 import { processSocialCallback } from '~/server/auth';
 import { useCognitoContextData } from '~/hooks/useCognitoContextData';
 
 // OAuth callback can have either success params (code, state) or error params
-const searchSchema = z.object({
+const callbackSchema = z.object({
   code: z.string().optional(),
   state: z.string().optional(),
   error: z.string().optional(),
   error_description: z.string().optional(),
 });
 
+type CallbackParams = z.infer<typeof callbackSchema>;
+
+// Server function to extract POST form data from the request
+const getFormPostData = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<CallbackParams | null> => {
+    const request = getRequest();
+
+    // Only process if this was a POST request with form data
+    if (request.method !== 'POST') {
+      return null;
+    }
+
+    const contentType = request.headers.get('content-type') || '';
+    if (!contentType.includes('application/x-www-form-urlencoded')) {
+      return null;
+    }
+
+    try {
+      const formData = await request.formData();
+      const data: CallbackParams = {
+        code: formData.get('code')?.toString(),
+        state: formData.get('state')?.toString(),
+        error: formData.get('error')?.toString(),
+        error_description: formData.get('error_description')?.toString(),
+      };
+      return callbackSchema.parse(data);
+    } catch {
+      return null;
+    }
+  }
+);
+
+// Search params schema (for GET requests)
+const searchSchema = callbackSchema;
+
 type SearchParams = z.infer<typeof searchSchema>;
+
+/**
+ * Check if CallbackParams has any meaningful data
+ */
+function hasParams(params: CallbackParams): boolean {
+  return !!(params.code || params.state || params.error);
+}
 
 /**
  * Check if the current window is a popup opened by window.open()
@@ -47,6 +91,11 @@ function notifyParentAndClose(
 
 export const Route = createFileRoute('/auth/social-login')({
   validateSearch: (search): SearchParams => searchSchema.parse(search),
+  // Loader runs on server - extracts form POST data if present
+  loader: async () => {
+    const formData = await getFormPostData();
+    return { formData };
+  },
   component: RouteComponent,
   head: () => ({
     meta: [
@@ -58,6 +107,12 @@ export const Route = createFileRoute('/auth/social-login')({
 
 function RouteComponent() {
   const search = Route.useSearch();
+  const { formData } = Route.useLoaderData();
+
+  // Use form POST data if available, otherwise fall back to query string
+  const params: CallbackParams =
+    formData && hasParams(formData) ? formData : search;
+
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>(
     'loading'
   );
@@ -68,10 +123,10 @@ function RouteComponent() {
   useEffect(() => {
     const completeAuth = async () => {
       // Check for OAuth error from provider
-      if (search.error) {
+      if (params.error) {
         const error =
-          search.error_description ||
-          search.error ||
+          params.error_description ||
+          params.error ||
           'Authentication was cancelled or failed';
 
         if (isPopup) {
@@ -85,7 +140,7 @@ function RouteComponent() {
       }
 
       // Validate required params for success case
-      if (!search.code || !search.state) {
+      if (!params.code || !params.state) {
         const error = 'Missing required callback parameters';
 
         if (isPopup) {
@@ -105,8 +160,8 @@ function RouteComponent() {
 
       const result = await processSocialCallback({
         data: {
-          code: search.code,
-          state: search.state,
+          code: params.code,
+          state: params.state,
           encodedData,
         },
       });
@@ -139,7 +194,7 @@ function RouteComponent() {
     };
 
     isCognitoContextReady && completeAuth();
-  }, [search, isPopup, getEncodedData, isCognitoContextReady]);
+  }, [params, isPopup, getEncodedData, isCognitoContextReady]);
 
   return (
     <Center minH="100vh" bg="gray.50">

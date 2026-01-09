@@ -803,6 +803,7 @@ function handler(event) {
           cdk: {
             restApi: {
               endpointConfiguration: { types: [EndpointType.REGIONAL] },
+              cloudWatchRoleRemovalPolicy: RemovalPolicy.DESTROY,
             },
           },
         }
