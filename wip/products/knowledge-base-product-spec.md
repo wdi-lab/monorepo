@@ -4,9 +4,9 @@
 
 ## Document Purpose
 
-This document describes the Knowledge Base feature from a product perspective, focusing on how users interact with it to provide their AI assistant with custom knowledge and structured data.
+This document describes the Knowledge Base feature from a product perspective, focusing on how it works and how users interact with it to provide their AI assistant with custom knowledge and structured data.
 
-**Status**: Draft v1.0
+**Status**: Draft v2.0
 **Date**: 2026-01-11
 **Related Docs**:
 - knowledge-base-service-architecture.md (technical architecture)
@@ -18,13 +18,12 @@ This document describes the Knowledge Base feature from a product perspective, f
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [User Value Proposition](#user-value-proposition)
-3. [Knowledge Types](#knowledge-types)
-4. [User Experience](#user-experience)
-5. [Use Cases](#use-cases)
-6. [Content Management](#content-management)
-7. [AI Integration](#ai-integration)
-8. [Success Metrics](#success-metrics)
+2. [Unstructured Content](#unstructured-content)
+3. [Structured Data](#structured-data)
+4. [Model Definition & Management](#model-definition--management)
+5. [How AI Uses Knowledge](#how-ai-uses-knowledge)
+6. [Content Organization](#content-organization)
+7. [Real-World Workflows](#real-world-workflows)
 
 ---
 
@@ -32,1289 +31,1175 @@ This document describes the Knowledge Base feature from a product perspective, f
 
 ### What is the Knowledge Base?
 
-The Knowledge Base is where sellers teach their AI assistant about their business by providing:
+The Knowledge Base is a dual-system for teaching AI about your business:
 
-**Unstructured Content** (Documents & Web Pages):
-- Help articles and FAQs
-- Product documentation
-- Company policies (returns, shipping, privacy)
-- Training materials
-- Blog posts and guides
+**Unstructured Content**: Documents, images, web pages, and text that the AI can search through and reference. Think of this as giving your AI a library to read from.
 
-**Structured Data** (Organized Information):
-- Product catalog (name, price, stock, variants)
-- FAQ database (question/answer pairs)
-- Policies (shipping, returns, etc.)
-- Custom data models (loyalty tiers, promotions, etc.)
+**Structured Data**: Organized information in defined formats (like a database). Think of this as giving your AI specific facts it can look up precisely.
 
-### Why It Matters
+### The Core Problem
 
-**Without Knowledge Base**:
-- AI gives generic responses
-- Cannot answer product-specific questions
-- Doesn't know company policies
-- Limited to basic conversations
-- High handoff rate to human
+An AI assistant without knowledge can only give generic answers. It doesn't know:
+- Your specific products and their details
+- Your company policies and procedures
+- Your brand voice and messaging
+- Your business rules and constraints
 
-**With Knowledge Base**:
-- AI gives accurate, business-specific answers
-- Knows all products and their details
-- Can cite policies and procedures
-- Handles complex inquiries autonomously
-- Lower handoff rate, higher customer satisfaction
+The Knowledge Base solves this by making business-specific information accessible to the AI during conversations.
 
-### Core Principle
+### How It Works (High Level)
 
-**"Teach your AI once, use everywhere"**
+**For Unstructured Content**:
+1. You provide documents, images, or web pages
+2. System extracts and processes the content
+3. Content is broken into searchable chunks
+4. AI searches these chunks during conversations
+5. AI cites relevant passages in responses
 
-Users add content to their Knowledge Base, and the AI automatically:
-- Searches for relevant information during conversations
-- Cites accurate product details
-- References company policies
-- Provides consistent answers across all channels
+**For Structured Data**:
+1. You define what type of information you have (a "model")
+2. You add individual records to that model
+3. AI can query, filter, and retrieve specific records
+4. AI presents structured information accurately
 
 ---
 
-## User Value Proposition
+## Unstructured Content
 
-### For Beauty Shop Owners
+### What Counts as Unstructured?
 
-**Problem**:
-"My AI can only handle basic questions. When customers ask about ingredients, skin types, or specific products, it has to hand off to me."
+**Documents**:
+- PDFs (product catalogs, policies, guides)
+- Word documents (.docx)
+- Text files (.txt, .md)
+- Presentations (in future)
 
-**Solution**:
-"Upload your product details, ingredient lists, and skincare guides to the Knowledge Base. Your AI now answers detailed product questions confidently."
+**Images**:
+- Product images with embedded text
+- Infographics and charts
+- Screenshots of policies or procedures
+- Photos with captions
 
-**Value**:
-- 80% fewer handoffs for product questions
-- Customers get instant, accurate product information
-- AI can recommend products based on customer needs
-- Consistent answers about ingredients and benefits
-
-### For E-commerce Businesses
-
-**Problem**:
-"We have 500+ products. The AI can't keep track of what's in stock, pricing, or product specifications."
-
-**Solution**:
-"Connect your product catalog to the Knowledge Base. AI always has up-to-date product info, pricing, and availability."
-
-**Value**:
-- AI knows entire catalog instantly
-- Automatic updates when products change
-- Can search and filter products for customers
-- Reduces "out of stock" disappointments
-
-### For Service Businesses
-
-**Problem**:
-"Customers have similar questions about our policies, but the AI doesn't know our specific terms."
-
-**Solution**:
-"Add your FAQs, policies, and service descriptions to the Knowledge Base. AI references them in conversations."
-
-**Value**:
-- Consistent policy communication
-- Reduced repetitive questions
-- AI handles complex policy inquiries
-- Builds customer trust with accurate info
-
----
-
-## Knowledge Types
-
-### 1. Unstructured Content
-
-**What It Is**: Documents, web pages, and text content that the AI can search and reference.
-
-**Examples**:
-- PDF product catalogs
+**Web Content**:
 - Help center articles
-- Policy documents (returns, privacy, terms)
-- Blog posts and guides
-- Training manuals
+- Blog posts
+- Product pages
+- FAQ pages on your website
+
+### The Upload-to-Search Journey
+
+**Step 1: Upload**
+User provides content by:
+- Uploading files directly
+- Providing URLs to scrape
+- Connecting entire website sections
+- Pasting text content
+
+**Step 2: Processing**
+
+The system performs several operations:
+
+**Text Extraction**:
+- PDFs: Extract text while preserving formatting context
+- Images: OCR (optical character recognition) to extract visible text
+- Word docs: Convert to plain text with structure markers
+- Web pages: Extract main content, ignore navigation/ads
+
+**Chunking**:
+Content is split into logical segments because:
+- AI can't read entire documents at once
+- Need to find specific relevant sections
+- Improve search precision
+
+Chunking strategies:
+- **Paragraph-based**: Split on paragraph breaks (natural for articles)
+- **Semantic**: Keep related ideas together (better for complex docs)
+- **Fixed-size**: Set number of words with overlap (predictable results)
+
+Example: A 10-page product guide becomes ~40 chunks, each representing a coherent section (one product, one Q&A, one procedure, etc.)
+
+**Metadata Tagging**:
+System automatically identifies:
+- Document title and source
+- Date information
+- Section headings
+- Key entities (product names, brands, categories)
+- Language
+
+**Making it Searchable**:
+Each chunk becomes searchable through:
+- **Keyword search**: Find exact words or phrases
+- **Semantic search**: Find meaning, even with different words
+  - Customer: "gentle cleanser for babies"
+  - Finds: "mild, hypoallergenic face wash suitable for infants"
+
+**Step 3: Indexing**
+
+Content is indexed for fast retrieval:
+- Chunks stored with their context (which document, which section)
+- Searchable by keywords, semantics, metadata
+- Ranked by relevance to queries
+
+**Step 4: AI Access**
+
+When customer asks a question:
+1. AI generates search query from customer's question
+2. System searches all indexed chunks
+3. Returns top 5-10 most relevant chunks
+4. AI reads chunks and composes answer
+5. AI optionally cites which document/section it used
+
+### Working with Images
+
+**How Image Content Works**:
+
+Images are processed differently than text:
+
+**Text in Images** (OCR):
+- System extracts any visible text
+- Product labels, ingredient lists, instructions
+- Charts, graphs, infographics
+- Text becomes searchable like document content
+
+**Image Descriptions** (Future: Vision AI):
+- System can describe what's in the image
+- "Product photo showing serum bottle with pump dispenser"
+- "Before/after comparison showing skin improvement"
+- Descriptions become searchable
+
+**Image Metadata**:
+- User can add captions and descriptions
+- Alt text becomes searchable
+- Tags help categorize images
+
+**Example Use Case**:
+You upload a product catalog PDF with images:
+- Text extraction: Gets product names, prices, descriptions
+- OCR: Reads text on product packaging in photos
+- User adds: Tags like "skincare", "bestseller"
+- Result: AI can answer "show me bestselling skincare products" and describe them using extracted info
+
+### Website Syncing
 
 **How It Works**:
-1. User uploads document or provides URL
-2. System extracts text and creates searchable chunks
-3. AI searches this content during conversations
-4. AI cites relevant passages in responses
 
-**User Interface**:
-```
-┌──────────────────────────────────────────────────────────┐
-│  Knowledge Base > Documents                               │
-├──────────────────────────────────────────────────────────┤
-│  [+ Upload Document] [+ Add Web Page] [+ Create Article] │
-├──────────────────────────────────────────────────────────┤
-│                                                           │
-│  Collections (3)                                          │
-│                                                           │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │ 📚 Product Guides (12 documents)                   │ │
-│  │    Last updated: 2 hours ago                        │ │
-│  │    [View] [Edit] [Add Document]                    │ │
-│  └────────────────────────────────────────────────────┘ │
-│                                                           │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │ 📄 Company Policies (5 documents)                  │ │
-│  │    Last updated: 1 week ago                         │ │
-│  │    [View] [Edit] [Add Document]                    │ │
-│  └────────────────────────────────────────────────────┘ │
-│                                                           │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │ 🌐 Help Center (website sync)                      │ │
-│  │    Auto-syncing from: help.myshop.com               │ │
-│  │    Last sync: 1 day ago • [Sync Now]               │ │
-│  │    [View] [Edit]                                    │ │
-│  └────────────────────────────────────────────────────┘ │
-└──────────────────────────────────────────────────────────┘
-```
+Instead of manually uploading, you can sync website sections:
 
-**Upload Flow**:
+**Initial Sync**:
+1. You provide starting URL (e.g., help.myshop.com)
+2. System crawls all linked pages under that URL
+3. Extracts main content from each page
+4. Processes same as uploaded documents
+5. Creates searchable knowledge base
+
+**Ongoing Sync**:
+- System re-checks pages on schedule (daily, weekly)
+- Detects changes, additions, deletions
+- Updates knowledge base automatically
+- You see what changed in activity log
+
+**Why This Matters**:
+- Keep knowledge base current without manual work
+- Your help center updates = AI knowledge updates
+- Write once (on website), AI learns automatically
+
+**Sync Scope Control**:
+You control what gets synced:
+- Include: /help/*, /blog/*, /guides/*
+- Exclude: /admin/*, /cart/*, /checkout/*
+- Follow: Sitemap XML for structured sites
+
+### Content Quality
+
+**What Makes Good Unstructured Content**:
+
+**Clear Writing**:
+- Use simple, direct language
+- Short paragraphs and sentences
+- Descriptive headings
+
+**Comprehensive Coverage**:
+- Answer questions fully
+- Include context and examples
+- Link related information
+
+**Current Information**:
+- Update outdated content
+- Add dates to time-sensitive info
+- Archive obsolete content
+
+**Well-Organized**:
+- Logical document structure
+- Clear section headings
+- Consistent formatting
+
+**Example - Poor vs. Good**:
+
+Poor document:
 ```
-┌──────────────────────────────────────────────────────────┐
-│  Upload Document to Knowledge Base                        │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                           │
-│  Collection                                               │
-│  Product Guides ▼                                         │
-│  [+ Create new collection]                                │
-│                                                           │
-│  Upload File                                              │
-│  ┌────────────────────────────────────────────────────┐  │
-│  │  Drag PDF, DOCX, or TXT file here                  │  │
-│  │  or [Browse Files]                                  │  │
-│  └────────────────────────────────────────────────────┘  │
-│                                                           │
-│  Supported formats: PDF, DOCX, TXT, MD                   │
-│  Max size: 10MB                                           │
-│                                                           │
-│  Document Details (optional)                              │
-│  ┌─────────────────────────────────────────────────────┐│
-│  │ Title                                               ││
-│  │ Skincare Routine Guide                              ││
-│  │                                                      ││
-│  │ Category                                             ││
-│  │ Product Guides ▼                                     ││
-│  │                                                      ││
-│  │ Tags (helps AI find this)                           ││
-│  │ [skincare] [routine] [guide] [+ Add tag]            ││
-│  └─────────────────────────────────────────────────────┘│
-│                                                           │
-│  [Cancel] [Upload & Process]                              │
-└──────────────────────────────────────────────────────────┘
+Returns
+You can return stuff. Email us.
 ```
 
-**Processing Status**:
+Good document:
 ```
-┌──────────────────────────────────────────────────────────┐
-│  Processing Document...                                   │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                           │
-│  Skincare Routine Guide.pdf                               │
-│                                                           │
-│  ✓ Uploaded                                               │
-│  ✓ Text extracted (2,347 words)                          │
-│  ⏳ Creating searchable chunks... 45%                    │
-│  ⏸️ Generating embeddings...                             │
-│  ⏸️ Making available to AI...                            │
-│                                                           │
-│  [Cancel Processing]                                      │
-└──────────────────────────────────────────────────────────┘
+Return Policy
+
+Eligibility:
+Items can be returned within 30 days of delivery if they are:
+- Unopened and unused
+- In original packaging
+- Not marked as final sale
+
+How to Return:
+1. Email returns@myshop.com with your order number
+2. We'll send a prepaid return label within 24 hours
+3. Pack item securely and attach label
+4. Drop off at any postal location
+5. Refund processed within 5 business days of receiving return
+
+Questions? Contact support@myshop.com or chat with us.
 ```
 
-**Success**:
-```
-┌──────────────────────────────────────────────────────────┐
-│  ✅ Document Added Successfully                          │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                           │
-│  Skincare Routine Guide is now available to your AI!     │
-│                                                           │
-│  The AI can now answer questions like:                   │
-│  • "What's a good skincare routine?"                     │
-│  • "When should I apply serum?"                          │
-│  • "How do I use your products together?"                │
-│                                                           │
-│  [View Document] [Upload Another] [Done]                 │
-└──────────────────────────────────────────────────────────┘
-```
+The good version gives AI everything needed to answer customer questions confidently.
 
 ---
 
-### 2. Structured Data
+## Structured Data
 
-**What It Is**: Organized information in a defined format (like a database).
+### What is Structured Data?
 
-**Predefined Models**:
-1. **Products** - Product catalog with pricing, stock, variants
-2. **FAQs** - Question and answer pairs
-3. **Policies** - Company policies (returns, shipping, privacy)
-4. **Custom Models** - User-defined structures
+Structured data is information organized in a specific format, like a spreadsheet or database. Each piece of information has defined fields.
 
-**How It Works**:
-1. User selects a model (or creates custom)
-2. Adds records to the model
-3. AI can query and filter this data
-4. AI presents structured information to customers
+**Example**: A product record
+- Name: Glow Serum
+- Price: $45
+- Category: Skincare
+- In Stock: Yes
+- Variants: 30ml, 50ml
 
----
+Versus unstructured text: "We have a Glow Serum in our skincare line for $45, available in 30ml and 50ml sizes, currently in stock."
 
-### 2a. Products (Structured)
+### Why Use Structured Data?
 
-See [product-catalog-kb-integration.md](./product-catalog-kb-integration.md) for complete details.
+**Precision**:
+- AI can find exact matches ("products under $50")
+- No ambiguity or interpretation needed
+- Reliable filtering and sorting
 
-**Quick Summary**:
-- Predefined product model with fields: SKU, name, price, stock, variants, etc.
-- Simple UI for new users (onboarding)
-- Advanced UI for existing customers
-- AI can search products, check availability, get pricing
+**Efficiency**:
+- Faster lookups than searching documents
+- Can combine multiple filters
+- Results are consistent
 
----
+**Data Integrity**:
+- Required fields ensure completeness
+- Type validation (numbers are numbers, dates are dates)
+- Easier to maintain and update
 
-### 2b. FAQs (Structured)
+**Example Query Comparison**:
 
-**What It Is**: Common questions and their answers, organized for quick AI retrieval.
+Unstructured: "Find all vegan skincare products under $50 in stock"
+- AI searches documents
+- May miss some products
+- Depends on how products are described
+- Uncertain if found everything
 
-**User Interface**:
-```
-┌──────────────────────────────────────────────────────────┐
-│  Knowledge Base > FAQs (47 questions)   [+ Add FAQ]      │
-├──────────────────────────────────────────────────────────┤
-│  🔍 Search FAQs...                [Filter by Category ▼] │
-├──────────────────────────────────────────────────────────┤
-│                                                           │
-│  Categories: All (47) | Shipping (12) | Returns (8) |    │
-│              Products (15) | Account (7) | Other (5)     │
-│                                                           │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                           │
-│  Shipping Questions                                       │
-│                                                           │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │ Q: How long does shipping take?                    │ │
-│  │                                                     │ │
-│  │ A: We ship within 1-2 business days. Delivery     │ │
-│  │    typically takes 3-5 business days for standard  │ │
-│  │    shipping, or 1-2 days for express.              │ │
-│  │                                                     │ │
-│  │ Category: Shipping • Priority: High                │ │
-│  │ Asked 127 times • Helpful: 95%                     │ │
-│  │                                                     │ │
-│  │ [Edit] [Delete] [View Analytics]                   │ │
-│  └────────────────────────────────────────────────────┘ │
-│                                                           │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │ Q: Do you ship internationally?                    │ │
-│  │                                                     │ │
-│  │ A: Yes! We ship to over 50 countries. Shipping    │ │
-│  │    costs and delivery times vary by location.      │ │
-│  │    [See full list of countries]                    │ │
-│  │                                                     │ │
-│  │ Category: Shipping • Priority: Medium              │ │
-│  │ Asked 89 times • Helpful: 88%                      │ │
-│  │                                                     │ │
-│  │ [Edit] [Delete] [View Analytics]                   │ │
-│  └────────────────────────────────────────────────────┘ │
-└──────────────────────────────────────────────────────────┘
-```
+Structured: Query with filters
+- Category = "Skincare"
+- Tags contains "vegan"
+- Price < $50
+- In Stock = true
+- Guaranteed to find all matching products
 
-**Add FAQ Form**:
-```
-┌──────────────────────────────────────────────────────────┐
-│  Add New FAQ                                   [Save] [×]│
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                           │
-│  Question *                                               │
-│  ┌─────────────────────────────────────────────────────┐│
-│  │ What is your return policy?                         ││
-│  └─────────────────────────────────────────────────────┘│
-│                                                           │
-│  Answer * (supports rich text)                           │
-│  [B] [I] [U] [Link] [List]                               │
-│  ┌─────────────────────────────────────────────────────┐│
-│  │ We offer a 30-day return policy on all products.   ││
-│  │ Items must be:                                      ││
-│  │ • Unopened and unused                               ││
-│  │ • In original packaging                             ││
-│  │ • Returned within 30 days of delivery               ││
-│  │                                                      ││
-│  │ To start a return, contact us at returns@...       ││
-│  └─────────────────────────────────────────────────────┘│
-│                                                           │
-│  Category                                                 │
-│  Returns ▼                                                │
-│                                                           │
-│  Tags (optional)                                          │
-│  [returns] [refund] [exchange] [+ Add tag]               │
-│                                                           │
-│  Priority (affects AI ranking)                           │
-│  (•) High    ( ) Medium    ( ) Low                       │
-│                                                           │
-│  Related FAQs (optional)                                  │
-│  [Select related questions...]                           │
-│                                                           │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                           │
-│  Preview how AI will use this:                           │
-│  ┌─────────────────────────────────────────────────────┐│
-│  │ Customer: "Can I return my order?"                  ││
-│  │                                                      ││
-│  │ AI: "Yes! We offer a 30-day return policy.         ││
-│  │      Items must be unopened, unused, and in        ││
-│  │      original packaging. To start a return,        ││
-│  │      contact us at returns@..."                     ││
-│  └─────────────────────────────────────────────────────┘│
-│                                                           │
-│  [Cancel] [Save FAQ]                                      │
-└──────────────────────────────────────────────────────────┘
-```
+### Predefined Models
 
-**Bulk Import**:
-```
-┌──────────────────────────────────────────────────────────┐
-│  Import FAQs from CSV                                     │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                           │
-│  [📥 Download Template]                                  │
-│                                                           │
-│  Template format:                                         │
-│  question,answer,category,tags,priority                  │
-│  "How long...","We ship within...","Shipping","",high    │
-│                                                           │
-│  Upload CSV File                                          │
-│  ┌────────────────────────────────────────────────────┐  │
-│  │  Drag file here or [Browse]                        │  │
-│  └────────────────────────────────────────────────────┘  │
-│                                                           │
-│  [Cancel] [Preview Import]                                │
-└──────────────────────────────────────────────────────────┘
-```
+We provide common models out-of-the-box:
 
-**FAQ Analytics**:
-```
-┌──────────────────────────────────────────────────────────┐
-│  FAQ Analytics: "How long does shipping take?"            │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                           │
-│  Last 30 Days                                             │
-│                                                           │
-│  ┌────────────┬────────────┬────────────┬────────────┐  │
-│  │  Times     │  Answered  │  Helpful   │ Handoffs   │  │
-│  │  Asked     │   by AI    │   Rating   │  to Human  │  │
-│  │            │            │            │            │  │
-│  │   127      │    124     │    95%     │     3      │  │
-│  │  ↑ 23%     │   ↑ 25%    │  ↑ 2%      │  ↓ 40%     │  │
-│  └────────────┴────────────┴────────────┴────────────┘  │
-│                                                           │
-│  Customer Variations (how they asked):                    │
-│  • "How long does shipping take?" - 45 times             │
-│  • "When will my order arrive?" - 38 times               │
-│  • "Shipping time?" - 22 times                           │
-│  • "How fast do you ship?" - 15 times                    │
-│  • Other variations - 7 times                             │
-│                                                           │
-│  Recommendations:                                         │
-│  ⚠️ Consider adding "order arrival" to tags              │
-│  ✓ Answer is clear and helpful                           │
-│                                                           │
-│  [Improve Answer] [View Related FAQs]                    │
-└──────────────────────────────────────────────────────────┘
-```
+**Product Model**:
+For e-commerce catalogs. Includes fields like:
+- Core: SKU, name, brand, category
+- Pricing: price, currency, sale price
+- Inventory: in stock, quantity
+- Rich: description, images, attributes
+- Discovery: tags, search keywords
+
+**FAQ Model**:
+For question/answer pairs. Fields:
+- Question (searchable)
+- Answer (rich text)
+- Category (for grouping)
+- Priority (AI ranking)
+- Related FAQs
+
+**Policy Model**:
+For company policies. Fields:
+- Title, category, summary
+- Full policy content (rich text)
+- Effective dates, version
+- Keywords for search
+
+**Order Model** (for customer support):
+For looking up customer orders. Fields:
+- Order number, customer info
+- Items, prices, totals
+- Status, tracking info
+- Dates (ordered, shipped, delivered)
+
+These models are ready to use immediately. You just add records to them.
+
+### When to Use Structured vs. Unstructured
+
+**Use Structured Data When**:
+- Information fits a consistent format
+- You need precise filtering/searching
+- You'll update frequently
+- Data has clear fields (name, price, date, etc.)
+- You want guaranteed accuracy
+
+Examples: Products, FAQs, promotions, store locations, team members
+
+**Use Unstructured Content When**:
+- Information is narrative or explanatory
+- Format varies document to document
+- Content is long-form (guides, articles)
+- You're uploading existing documents
+- Information is contextual rather than discrete facts
+
+Examples: Help articles, brand stories, tutorials, blog posts, policies (can be either)
+
+**Often Use Both**:
+Example - Product knowledge:
+- Structured: Product catalog (names, prices, stock)
+- Unstructured: Product guides (how to use, tips, ingredients deep-dive)
+
+AI uses both: Structured for factual lookups, unstructured for detailed explanations.
 
 ---
 
-### 2c. Policies (Structured)
+## Model Definition & Management
 
-**What It Is**: Company policies organized by type for easy AI reference.
+### Understanding Models
 
-**Policy Types**:
-- Returns & Refunds
-- Shipping & Delivery
-- Privacy Policy
-- Terms of Service
-- Warranty & Guarantees
-- Custom policies
+A **model** is a template that defines what information you'll store and how it's organized.
 
-**User Interface**:
-```
-┌──────────────────────────────────────────────────────────┐
-│  Knowledge Base > Policies (5)            [+ Add Policy] │
-├──────────────────────────────────────────────────────────┤
-│                                                           │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │ 📋 Return Policy                                   │ │
-│  │    Category: Returns & Refunds                      │ │
-│  │    Effective: Jan 1, 2026 • Version 2.0            │ │
-│  │                                                     │ │
-│  │    Summary: 30-day return policy on all products   │ │
-│  │                                                     │ │
-│  │    [View Full Policy] [Edit] [Version History]     │ │
-│  └────────────────────────────────────────────────────┘ │
-│                                                           │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │ 📦 Shipping Policy                                 │ │
-│  │    Category: Shipping & Delivery                    │ │
-│  │    Effective: Jan 1, 2026 • Version 1.0            │ │
-│  │                                                     │ │
-│  │    Summary: 1-2 day processing, 3-5 day delivery   │ │
-│  │                                                     │ │
-│  │    [View Full Policy] [Edit] [Version History]     │ │
-│  └────────────────────────────────────────────────────┘ │
-│                                                           │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │ 🔒 Privacy Policy                                  │ │
-│  │    Category: Privacy & Data                         │ │
-│  │    Effective: Jan 1, 2026 • Version 1.0            │ │
-│  │                                                     │ │
-│  │    Summary: How we collect and use customer data   │ │
-│  │                                                     │ │
-│  │    [View Full Policy] [Edit] [Version History]     │ │
-│  └────────────────────────────────────────────────────┘ │
-└──────────────────────────────────────────────────────────┘
-```
+Think of it like designing a form:
+- What questions do you need answers to?
+- What type of answer (text, number, yes/no, etc.)?
+- Which questions are required?
+- How will you search this information later?
 
-**Add/Edit Policy**:
-```
-┌──────────────────────────────────────────────────────────┐
-│  Edit Policy: Return Policy                    [Save] [×]│
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                           │
-│  Title *                                                  │
-│  ┌─────────────────────────────────────────────────────┐│
-│  │ Return Policy                                        ││
-│  └─────────────────────────────────────────────────────┘│
-│                                                           │
-│  Category *                                               │
-│  Returns & Refunds ▼                                      │
-│                                                           │
-│  Summary (for AI quick reference) *                      │
-│  ┌─────────────────────────────────────────────────────┐│
-│  │ 30-day return policy on all unopened products       ││
-│  └─────────────────────────────────────────────────────┘│
-│                                                           │
-│  Full Policy (rich text) *                               │
-│  [B] [I] [U] [Link] [List] [Table]                       │
-│  ┌─────────────────────────────────────────────────────┐│
-│  │ ## Return Policy                                     ││
-│  │                                                      ││
-│  │ We want you to be completely satisfied with your    ││
-│  │ purchase. If you're not happy, we offer a 30-day    ││
-│  │ return policy.                                       ││
-│  │                                                      ││
-│  │ ### Eligibility                                      ││
-│  │ Items must be:                                       ││
-│  │ • Unopened and unused                                ││
-│  │ • In original packaging                              ││
-│  │ • Returned within 30 days of delivery                ││
-│  │                                                      ││
-│  │ ### Process                                          ││
-│  │ 1. Contact us at returns@myshop.com                  ││
-│  │ 2. We'll provide a return label                      ││
-│  │ 3. Ship the item back (free return shipping)        ││
-│  │ 4. Refund processed within 5 business days           ││
-│  └─────────────────────────────────────────────────────┘│
-│                                                           │
-│  Effective Date                                           │
-│  2026-01-01 📅                                            │
-│                                                           │
-│  Expiration Date (optional)                               │
-│  None                                                     │
-│                                                           │
-│  Version                                                  │
-│  2.0                                                      │
-│                                                           │
-│  Keywords (for search)                                    │
-│  [returns] [refund] [exchange] [money-back]              │
-│                                                           │
-│  [Cancel] [Save as Draft] [Publish]                      │
-└──────────────────────────────────────────────────────────┘
-```
+### Creating a Custom Model
 
----
+**The Thinking Process**:
 
-### 2d. Custom Models
+1. **What are you managing?**
+   Example: "Customer loyalty tiers"
 
-**What It Is**: User-defined data structures for unique business needs.
+2. **What information defines each item?**
+   Example: Each tier has:
+   - Name (Bronze, Silver, Gold)
+   - Points required to reach it
+   - Benefits you get
+   - Badge color
 
-**Use Cases**:
-- Loyalty tiers (Bronze, Silver, Gold with different benefits)
-- Promotions (active sales, discount codes, terms)
-- Service packages (different tiers with features)
-- Locations (store addresses, hours, contact info)
-- Team members (staff bios, specialties, availability)
+3. **What types of information are these?**
+   - Name: Text (short)
+   - Points: Number
+   - Benefits: Text (long, formatted)
+   - Badge color: Color/text
 
-**Create Custom Model**:
-```
-┌──────────────────────────────────────────────────────────┐
-│  Create Custom Model                         [Save] [×]  │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                           │
-│  What kind of information do you want to organize?       │
-│                                                           │
-│  Model Name *                                             │
-│  ┌─────────────────────────────────────────────────────┐│
-│  │ Loyalty Tiers                                        ││
-│  └─────────────────────────────────────────────────────┘│
-│                                                           │
-│  Description (helps AI understand)                       │
-│  ┌─────────────────────────────────────────────────────┐│
-│  │ Customer loyalty program tiers and their benefits    ││
-│  └─────────────────────────────────────────────────────┘│
-│                                                           │
-│  Fields (define what information you want to store)      │
-│                                                           │
-│  ┌─────────────────────────────────────────────────────┐│
-│  │ Field 1                                              ││
-│  │ Name: tier_name                                      ││
-│  │ Type: Text ▼                                         ││
-│  │ [✓] Required  [✓] Searchable                        ││
-│  │ Description: Name of the tier (e.g., Bronze)         ││
-│  │ [Remove]                                             ││
-│  │                                                      ││
-│  │ ─────────────────────────────────────────────────── ││
-│  │                                                      ││
-│  │ Field 2                                              ││
-│  │ Name: points_required                                ││
-│  │ Type: Number ▼                                       ││
-│  │ [✓] Required  [ ] Searchable                        ││
-│  │ Description: Points needed to reach this tier        ││
-│  │ [Remove]                                             ││
-│  │                                                      ││
-│  │ ─────────────────────────────────────────────────── ││
-│  │                                                      ││
-│  │ Field 3                                              ││
-│  │ Name: benefits                                       ││
-│  │ Type: Rich Text ▼                                    ││
-│  │ [✓] Required  [✓] Searchable                        ││
-│  │ Description: Benefits of this tier                   ││
-│  │ [Remove]                                             ││
-│  └─────────────────────────────────────────────────────┘│
-│                                                           │
-│  [+ Add Field]                                            │
-│                                                           │
-│  Field Types: Text, Number, True/False, Date, List,      │
-│               Rich Text, Link                             │
-│                                                           │
-│  [Cancel] [Create Model]                                  │
-└──────────────────────────────────────────────────────────┘
-```
+4. **How will you search/filter this?**
+   - By tier name
+   - By points threshold
+   - By benefits (search text)
 
-**Add Records to Custom Model**:
-```
-┌──────────────────────────────────────────────────────────┐
-│  Loyalty Tiers (3 tiers)                   [+ Add Tier]  │
-├──────────────────────────────────────────────────────────┤
-│                                                           │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │ 🥉 Bronze Tier                                     │ │
-│  │    Points Required: 0                               │ │
-│  │    Benefits:                                         │ │
-│  │    • Free standard shipping on orders $50+          │ │
-│  │    • Birthday discount                               │ │
-│  │    • Early access to sales                           │ │
-│  │                                                     │ │
-│  │    [Edit] [Delete]                                  │ │
-│  └────────────────────────────────────────────────────┘ │
-│                                                           │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │ 🥈 Silver Tier                                     │ │
-│  │    Points Required: 1,000                           │ │
-│  │    Benefits:                                         │ │
-│  │    • All Bronze benefits, plus:                     │ │
-│  │    • Free express shipping                           │ │
-│  │    • 10% off all orders                             │ │
-│  │    • Priority customer service                       │ │
-│  │                                                     │ │
-│  │    [Edit] [Delete]                                  │ │
-│  └────────────────────────────────────────────────────┘ │
-│                                                           │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │ 🥇 Gold Tier                                       │ │
-│  │    Points Required: 5,000                           │ │
-│  │    Benefits:                                         │ │
-│  │    • All Silver benefits, plus:                     │ │
-│  │    • 15% off all orders                             │ │
-│  │    • Exclusive products                              │ │
-│  │    • Dedicated account manager                       │ │
-│  │    • Free returns                                    │ │
-│  │                                                     │ │
-│  │    [Edit] [Delete]                                  │ │
-│  └────────────────────────────────────────────────────┘ │
-└──────────────────────────────────────────────────────────┘
-```
+5. **What's required vs. optional?**
+   - Name: Required
+   - Points: Required
+   - Benefits: Required
+   - Badge color: Optional
 
-**How AI Uses Custom Models**:
-```
-Customer: "What are the benefits of Gold tier?"
+### Model Creation Workflow
 
-AI: "Gold tier members enjoy exclusive benefits:
-     • All Silver tier benefits
-     • 15% off all orders
-     • Access to exclusive products
-     • Dedicated account manager
-     • Free returns on all orders
+**Step 1: Name and Describe the Model**
 
-     You need 5,000 points to reach Gold tier.
-     You currently have 3,200 points - just 1,800 more to go!"
-```
+Give it a clear name:
+- ✓ "Loyalty Tiers"
+- ✓ "Promotional Campaigns"
+- ✓ "Store Locations"
+- ✗ "Stuff" (too vague)
+- ✗ "Data" (not descriptive)
 
----
+Add description to help AI understand:
+"Customer loyalty program tiers, including point thresholds and tier-specific benefits"
 
-## User Experience
+This description helps AI know when to use this model during conversations.
 
-### Onboarding Knowledge Base
+**Step 2: Define Fields**
 
-**When**: After completing product setup, before going live
+For each field, specify:
 
-**Goal**: Help new users add essential knowledge quickly
+**Field Name**: What you're storing
+- Use clear, descriptive names
+- Examples: "tier_name", "points_required", "benefits"
 
-**Flow**:
-```
-┌──────────────────────────────────────────────────────────┐
-│  Teach Your AI (Optional - 5 minutes)                    │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                           │
-│  Your AI already knows your products, but you can teach  │
-│  it more to handle additional questions.                 │
-│                                                           │
-│  Quick Setup (choose what applies):                      │
-│                                                           │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │ [ ] Add Common FAQs                                │ │
-│  │     Help AI answer frequent questions              │ │
-│  │     Takes 2 minutes • [Start]                       │ │
-│  └────────────────────────────────────────────────────┘ │
-│                                                           │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │ [ ] Add Return/Shipping Policies                   │ │
-│  │     Tell AI your policies                           │ │
-│  │     Takes 2 minutes • [Start]                       │ │
-│  └────────────────────────────────────────────────────┘ │
-│                                                           │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │ [ ] Upload Product Guides                          │ │
-│  │     Add detailed product information               │ │
-│  │     Takes 1 minute • [Start]                        │ │
-│  └────────────────────────────────────────────────────┘ │
-│                                                           │
-│  [Skip for Now] [Add Selected Knowledge]                 │
-│                                                           │
-│  💡 You can always add more knowledge later from the     │
-│     Knowledge Base section in your dashboard.            │
-└──────────────────────────────────────────────────────────┘
-```
+**Field Type**: What kind of data
+- **Text (short)**: Names, titles, SKUs (< 200 chars)
+- **Text (long)**: Descriptions, notes, content
+- **Rich Text**: Formatted content (bullets, bold, links)
+- **Number**: Prices, quantities, scores
+- **True/False**: Yes/no questions, feature flags
+- **Date**: Deadlines, effective dates, timestamps
+- **List**: Multiple items (tags, categories)
+- **Link**: URLs, references
 
-**Quick FAQ Setup**:
-```
-┌──────────────────────────────────────────────────────────┐
-│  Add Common FAQs (Quick Setup)                           │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                           │
-│  We've suggested common beauty shop questions.           │
-│  Edit the answers to match your business:                │
-│                                                           │
-│  FAQ 1 of 5                                               │
-│  ┌─────────────────────────────────────────────────────┐│
-│  │ Q: How long does shipping take?                     ││
-│  │                                                      ││
-│  │ A: [Your answer here - e.g., "We ship within 1-2   ││
-│  │     business days..."]                               ││
-│  └─────────────────────────────────────────────────────┘│
-│                                                           │
-│  [Skip This] [← Previous] [Next →]                       │
-│                                                           │
-│  Progress: ●●○○○                                         │
-└──────────────────────────────────────────────────────────┘
-```
+**Required or Optional**:
+- Required: Must have value to save record
+- Optional: Can be blank
 
----
+**Searchable**:
+- Yes: Include in AI search queries
+- No: Just store, don't search
 
-### Dashboard Access
+**Example Field Definitions**:
 
-**Navigation**:
-```
-Dashboard > Knowledge Base
-```
+Field: "tier_name"
+- Type: Text (short)
+- Required: Yes
+- Searchable: Yes
+- Description: "Name of the loyalty tier"
 
-**Main View**:
-```
-┌──────────────────────────────────────────────────────────┐
-│  Knowledge Base                                           │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                           │
-│  What your AI knows:                                      │
-│                                                           │
-│  ┌────────────┬────────────┬────────────┬────────────┐  │
-│  │  Products  │    FAQs    │  Documents │  Policies  │  │
-│  │     12     │     47     │      8     │      5     │  │
-│  └────────────┴────────────┴────────────┴────────────┘  │
-│                                                           │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                           │
-│  [📦 Manage Products] [❓ Manage FAQs]                   │
-│  [📄 Manage Documents] [📋 Manage Policies]              │
-│  [⚙️ Custom Models]                                      │
-│                                                           │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                           │
-│  Recent Activity                                          │
-│                                                           │
-│  • Added FAQ "Can I return opened products?" (2 hrs ago) │
-│  • Updated product "Glow Serum" stock (4 hrs ago)        │
-│  • Uploaded document "Ingredient Guide.pdf" (1 day ago)  │
-│                                                           │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                           │
-│  AI Knowledge Quality Score: 87/100 ⭐⭐⭐⭐              │
-│                                                           │
-│  Recommendations to improve:                              │
-│  ⚠️ Add more FAQs about ingredients (12 similar questions)│
-│  💡 Consider uploading your returns policy document       │
-│                                                           │
-│  [View Full Report]                                       │
-└──────────────────────────────────────────────────────────┘
-```
+Field: "points_required"
+- Type: Number
+- Required: Yes
+- Searchable: No
+- Description: "Points needed to reach this tier"
+
+Field: "benefits"
+- Type: Rich Text
+- Required: Yes
+- Searchable: Yes
+- Description: "List of benefits for this tier"
+
+Field: "badge_icon"
+- Type: Link (URL)
+- Required: No
+- Searchable: No
+- Description: "URL to tier badge image"
+
+**Step 3: Add Initial Records**
+
+Once model is defined, add actual data:
+
+Record 1:
+- tier_name: "Bronze"
+- points_required: 0
+- benefits: "• Free shipping over $50\n• Birthday discount\n• Early sale access"
+- badge_icon: "https://cdn.myshop.com/badges/bronze.png"
+
+Record 2:
+- tier_name: "Silver"
+- points_required: 1000
+- benefits: "• All Bronze benefits\n• 10% off all orders\n• Free express shipping\n• Priority support"
+- badge_icon: "https://cdn.myshop.com/badges/silver.png"
+
+And so on...
+
+### Model Management
+
+**Versioning**:
+
+Models can evolve. When you change a model:
+
+**Adding Fields**:
+- Safe operation
+- Existing records get new field (empty)
+- Can set default value for new field
+
+Example: Add "renewal_date" field to loyalty tiers
+- Existing Bronze, Silver, Gold records unchanged
+- New field available for future records
+- Can backfill if needed
+
+**Removing Fields**:
+- Requires confirmation (data will be deleted)
+- System warns which records are affected
+- Option to export data first
+
+**Changing Field Types**:
+- Risky operation
+- System attempts conversion (text → number, etc.)
+- May fail if incompatible
+- Preview changes before applying
+
+**Field Renaming**:
+- Safe operation
+- System preserves data, just changes label
+- AI re-trains with new field name
+
+**Model Versions**:
+
+System tracks version history:
+- Version 1.0: Initial model (3 fields)
+- Version 1.1: Added "badge_icon" field
+- Version 2.0: Added "renewal_benefits" field, changed "points_required" to "points_threshold"
+
+You can:
+- View version history
+- See what changed when
+- Rollback if needed (with data migration)
+
+### Working with Records
+
+**Adding Records**:
+
+Two ways to add data:
+
+**Form Entry** (for small numbers):
+- Fill out form for each record
+- Validate as you type
+- Save individually
+- Good for 1-50 records
+
+**Bulk Import** (for large numbers):
+- Export template CSV
+- Fill in spreadsheet
+- Upload CSV
+- System validates and imports
+- Good for 50+ records
+
+**Editing Records**:
+
+Find and edit:
+- Search or browse to find record
+- Click to edit
+- Change values
+- Save (validates changes)
+
+**Bulk Editing**:
+- Select multiple records
+- Change common field across all
+- Example: Mark 20 products as "on sale"
+
+**Deleting Records**:
+- Individual: Delete one record
+- Bulk: Select and delete multiple
+- Soft delete: Mark deleted, can restore
+- Hard delete: Permanent removal
+
+**Data Validation**:
+
+System enforces rules:
+- Required fields must have values
+- Numbers must be numeric
+- Dates must be valid dates
+- Links must be valid URLs
+- Unique fields can't have duplicates
+
+Example validation errors:
+- ✗ "Price: abc" → Must be a number
+- ✗ "Date: tomorrow" → Must be YYYY-MM-DD format
+- ✗ "SKU: GLW-001" → Already exists, SKU must be unique
+
+### Model Relationships
+
+**Connecting Models**:
+
+Sometimes models relate to each other:
+
+**Example**: Products and Categories
+
+Instead of typing category name in every product, create:
+- Category model (list of all categories)
+- Product model has "category" field that references Category model
+
+Benefits:
+- Consistency (can't misspell "Skincare" as "Skin care")
+- Easy bulk changes (rename category once, all products update)
+- Can add category metadata (description, image)
+
+**Example**: Orders and Products
+
+Order model can reference Product model:
+- Order has "items" field
+- Each item references a product ID
+- AI can look up product details for each order item
+
+**Relationship Types**:
+
+**One-to-Many**:
+- One category has many products
+- One customer has many orders
+
+**Many-to-Many**:
+- Products have many tags
+- Tags apply to many products
+
+**Reference vs. Embed**:
+- Reference: Store just the ID, look up details when needed (keeps data in sync)
+- Embed: Copy all data into record (faster, but can become outdated)
+
+For most use cases, references work better.
+
+### Model Templates
+
+To make model creation easier, we provide templates:
+
+**Store Locations**:
+Pre-configured fields:
+- Name, address, city, state, zip, country
+- Phone, email, hours
+- Services available
+- Coordinates (for maps)
+
+**Team Members**:
+Pre-configured fields:
+- Name, role, department
+- Bio, photo, specialties
+- Contact info
+- Availability/schedule
+
+**Promotions**:
+Pre-configured fields:
+- Name, description, discount type
+- Code, start/end dates
+- Conditions, exclusions
+- Active status
+
+**Events**:
+Pre-configured fields:
+- Name, description, date/time
+- Location, capacity
+- Registration link
+- Tags/categories
+
+You can use these as-is or customize them to fit your needs.
+
+### Migrating Data
+
+**From External Systems**:
+
+If you have data elsewhere (spreadsheet, another platform), you can import:
+
+**Export from Source**:
+- Download as CSV/Excel
+- Clean up data if needed
+- Map columns to model fields
+
+**Import to Knowledge Base**:
+- Create model (or use predefined)
+- Map CSV columns to model fields
+- Preview import (shows how data will look)
+- Validate (shows errors)
+- Import (creates all records)
+
+**Example**: Shopify product export
+- Export products from Shopify as CSV
+- Create Product model in Knowledge Base
+- Map: Shopify "Title" → Product "name"
+- Map: Shopify "Price" → Product "price"
+- Import 500 products at once
+
+**Keeping in Sync**:
+
+For ongoing sync:
+- One-time import: Manual CSV uploads when needed
+- Scheduled import: Auto-import CSV from URL daily
+- API integration: Real-time sync via API (future)
 
 ---
 
-## Use Cases
+## How AI Uses Knowledge
 
-### Use Case 1: Beauty Shop with Product Questions
+### Search and Retrieval Process
 
-**Scenario**: Customers frequently ask about ingredients, skin types, and usage
+**Unstructured Content Search**:
 
-**Knowledge Base Setup**:
-1. **Products**: 45 beauty products with descriptions
-2. **Documents**:
-   - Ingredient glossary (PDF)
-   - Skincare routine guide
-   - Product usage instructions
-3. **FAQs**: 30 common questions
-4. **Custom Model**: "Skin Concerns" (acne, dryness, aging, etc. with recommended products)
+1. **Customer asks question**: "What's your return policy?"
 
-**Customer Conversation**:
-```
-Customer: "I have sensitive skin. Which products are safe for me?"
+2. **AI analyzes question**:
+   - Key concepts: return, policy
+   - Intent: policy information
+   - Entities: none specific
 
-AI: "For sensitive skin, I recommend our gentle products:
+3. **AI searches knowledge base**:
+   - Keyword search: "return policy"
+   - Semantic search: documents about returns, refunds, exchanges
+   - Filters: policy documents, FAQ category "returns"
 
-    1. Hydra Calm Cleanser - Fragrance-free, pH-balanced
-    2. Soothe Serum - Calming ceramides and niacinamide
-    3. Gentle Day Cream - Hypoallergenic, dermatologist-tested
+4. **System returns relevant chunks**:
+   - Return Policy document (chunk 1): Eligibility section
+   - Return Policy document (chunk 2): Process section
+   - FAQ: "How do I return an item?" (answer)
+   - Ranked by relevance
 
-    All three are specifically formulated for sensitive skin and
-    are free from harsh fragrances and irritants.
+5. **AI composes response**:
+   - Reads top 3-5 chunks
+   - Synthesizes into coherent answer
+   - Cites source: "Per our Return Policy..."
 
-    Would you like to know more about any of these?"
-```
+**Structured Data Query**:
 
-**How AI Found This**:
-- Searched products with tag "sensitive-skin"
-- Referenced "Skin Concerns" custom model
-- Cited product descriptions from knowledge base
+1. **Customer asks**: "Do you have vitamin C serums under $50?"
 
----
+2. **AI analyzes question**:
+   - Key concepts: vitamin C, serum, price constraint
+   - Intent: product search
+   - Filters needed: category, ingredients, price
 
-### Use Case 2: E-commerce Store with Large Catalog
+3. **AI constructs query**:
+   - Model: Products
+   - Filters:
+     - category contains "serum"
+     - (description contains "vitamin C" OR tags contains "vitamin-c")
+     - price < 5000 (in cents)
+     - inStock = true
+   - Sort: by price ascending
 
-**Scenario**: Online shop with 500+ products, customers need help finding products
+4. **System returns matching records**:
+   - Glow Serum ($45) ✓
+   - Bright Serum ($38) ✓
+   - Radiance Boost ($42) ✓
 
-**Knowledge Base Setup**:
-1. **Products**: 523 products with full details
-   - Categories: Skincare, Makeup, Haircare, Tools
-   - Brands: 15 different brands
-   - Filters: Price, skin type, concerns, ingredients
-2. **FAQs**: Shipping, returns, account management
-3. **Documents**:
-   - Brand stories (15 PDFs)
-   - How-to guides
+5. **AI presents results**:
+   - Lists products with details
+   - Highlights relevant info
+   - Offers to narrow down further
 
-**Customer Conversation**:
-```
-Customer: "I'm looking for a vitamin C serum under $50"
+### Hybrid Search
 
-AI: "I found 3 vitamin C serums under $50:
+Often AI uses both types together:
 
-    1. Glow Serum - $45 (15% Vitamin C)
-       ⭐ 4.8/5 (234 reviews) • 30ml or 50ml
+**Example**: "Tell me about your best vitamin C product"
 
-    2. Bright Morning Serum - $38 (10% Vitamin C)
-       ⭐ 4.6/5 (189 reviews) • 30ml
+AI performs:
 
-    3. Radiance Boost - $42 (12% Vitamin C + Ferulic Acid)
-       ⭐ 4.9/5 (312 reviews) • 30ml
-
-    All are in stock and include free shipping over $50.
-    Which would you like to know more about?"
-```
-
-**How AI Found This**:
-- Queried products with filters: category="serum", price<5000, ingredients contains "vitamin c"
-- Sorted by rating
-- Retrieved stock status
-- Calculated shipping threshold
-
----
-
-### Use Case 3: Service Business with Policies
-
-**Scenario**: Spa with appointment booking, customers ask about policies frequently
-
-**Knowledge Base Setup**:
-1. **Services**: Custom model with treatments, durations, prices
-2. **Policies**:
-   - Cancellation policy
-   - Late arrival policy
-   - Gift card terms
-   - Membership benefits
-3. **FAQs**: Booking, preparation, what to expect
-4. **Documents**: Treatment descriptions, aftercare guides
-
-**Customer Conversation**:
-```
-Customer: "What's your cancellation policy?"
-
-AI: "Our cancellation policy:
-
-    • Free cancellation up to 24 hours before appointment
-    • Less than 24 hours: 50% cancellation fee
-    • No-shows: Full treatment fee charged
-
-    We understand things come up! Just let us know as soon
-    as possible, and we'll do our best to help.
-
-    To cancel or reschedule, reply with your booking number
-    or contact us at bookings@spa.com"
-```
-
-**How AI Found This**:
-- Retrieved "Cancellation Policy" from policies
-- Presented in customer-friendly format
-- Offered next steps
-
----
-
-## Content Management
-
-### Organizing Knowledge
-
-**Collections**:
-Think of collections as folders or categories for organizing related content.
-
-**Examples**:
-```
-Product Guides
-├─ Skincare Routine Guide.pdf
-├─ Makeup Application Tips.pdf
-└─ Ingredient Glossary.pdf
-
-Company Policies
-├─ Return Policy
-├─ Shipping Policy
-└─ Privacy Policy
-
-Help Center Articles
-├─ How to Track Orders
-├─ Account Management
-└─ Loyalty Program Guide
-```
-
-**Collection Settings**:
-```
-┌──────────────────────────────────────────────────────────┐
-│  Collection: Product Guides                    [Edit] [×] │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                           │
-│  Collection Name                                          │
-│  ┌─────────────────────────────────────────────────────┐│
-│  │ Product Guides                                       ││
-│  └─────────────────────────────────────────────────────┘│
-│                                                           │
-│  Description                                              │
-│  ┌─────────────────────────────────────────────────────┐│
-│  │ Guides about how to use our products                ││
-│  └─────────────────────────────────────────────────────┘│
-│                                                           │
-│  Type                                                     │
-│  (•) Documents (unstructured)                             │
-│  ( ) Structured Data (use a model)                        │
-│                                                           │
-│  Access                                                   │
-│  (•) Available to AI assistant                            │
-│  ( ) Private (not available to AI)                        │
-│                                                           │
-│  Priority (affects search ranking)                        │
-│  ( ) Low  (•) Medium  ( ) High                           │
-│                                                           │
-│  Auto-sync from website                                   │
-│  [ ] Enable website sync                                  │
-│  URL: ___________________________________                 │
-│                                                           │
-│  [Cancel] [Save Collection]                               │
-└──────────────────────────────────────────────────────────┘
-```
-
-### Website Sync
-
-**What It Is**: Automatically keep knowledge base in sync with your website
-
-**Setup**:
-```
-┌──────────────────────────────────────────────────────────┐
-│  Sync Website Content                                     │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                           │
-│  Automatically sync content from your website so your    │
-│  AI always has the latest information.                   │
-│                                                           │
-│  Website URL                                              │
-│  ┌─────────────────────────────────────────────────────┐│
-│  │ https://help.myshop.com                              ││
-│  └─────────────────────────────────────────────────────┘│
-│                                                           │
-│  What to sync                                             │
-│  [✓] All pages under this URL                            │
-│  [ ] Specific pages only                                  │
-│  [ ] Follow sitemap (https://help.myshop.com/sitemap.xml)│
-│                                                           │
-│  Sync frequency                                           │
-│  ( ) Manual only                                          │
-│  (•) Daily at 2:00 AM                                    │
-│  ( ) Weekly on Sundays                                    │
-│  ( ) Real-time (webhook)                                  │
-│                                                           │
-│  Exclude URLs matching (optional)                        │
-│  /admin/*, /cart/*, /checkout/*                          │
-│                                                           │
-│  [Test Connection] [Start Sync]                           │
-└──────────────────────────────────────────────────────────┘
-```
-
-**Sync Status**:
-```
-┌──────────────────────────────────────────────────────────┐
-│  Website Sync Status                                      │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                           │
-│  ✅ Syncing from: help.myshop.com                        │
-│                                                           │
-│  Last sync: 2 hours ago                                   │
-│  Next sync: In 22 hours (tomorrow at 2:00 AM)            │
-│                                                           │
-│  Statistics:                                              │
-│  • Pages synced: 47                                      │
-│  • New pages: 2                                          │
-│  • Updated pages: 5                                      │
-│  • Removed pages: 0                                      │
-│                                                           │
-│  Recent changes:                                          │
-│  • Updated: "How to track your order" (2 hours ago)      │
-│  • New: "Gift wrapping options" (2 hours ago)            │
-│  • Updated: "International shipping" (1 day ago)         │
-│                                                           │
-│  [Sync Now] [View All Pages] [Edit Settings]             │
-└──────────────────────────────────────────────────────────┘
-```
-
-### Bulk Operations
-
-**Import from CSV**:
-- Products: Import hundreds of products at once
-- FAQs: Import question/answer pairs
-- Any structured model
-
-**Export Data**:
-- Export to CSV for backup
-- Edit in spreadsheet and re-import
-- Share with team
-
-**Duplicate Detection**:
-```
-┌──────────────────────────────────────────────────────────┐
-│  ⚠️ Duplicate Content Detected                           │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                           │
-│  We found content that looks similar:                    │
-│                                                           │
-│  Your new FAQ:                                            │
-│  Q: "How long does shipping take?"                       │
-│  A: "We ship within 1-2 business days..."               │
-│                                                           │
-│  Existing FAQ:                                            │
-│  Q: "Shipping time?"                                     │
-│  A: "We ship within 1-2 business days..."               │
-│                                                           │
-│  Similarity: 95% match                                    │
-│                                                           │
-│  What would you like to do?                              │
-│  ( ) Merge into existing FAQ (recommended)                │
-│  ( ) Keep both (they're different)                        │
-│  ( ) Replace existing FAQ                                 │
-│  ( ) Cancel                                               │
-│                                                           │
-│  [Continue]                                               │
-└──────────────────────────────────────────────────────────┘
-```
-
----
-
-## AI Integration
-
-### How AI Uses Knowledge Base
-
-**During Conversations**:
-1. Customer sends message
-2. AI detects intent and extracts entities
-3. AI searches Knowledge Base for relevant information
-4. AI composes response using found information
-5. AI cites sources when applicable
-
-**Search Strategy**:
-```
-Customer: "Do you have vitamin C serums for sensitive skin?"
-
-AI Process:
-1. Detect entities: product_type="serum",
-                   ingredient="vitamin C",
-                   concern="sensitive skin"
-
-2. Search products:
-   - Filter: category="serum"
-   - Filter: tags contains "vitamin-c" OR description contains "vitamin c"
-   - Filter: tags contains "sensitive-skin"
+1. **Structured search** (Products model):
+   - Filter: tags contains "vitamin-c"
    - Sort: by rating or sales
+   - Get top product: Glow Serum
 
-3. Search documents:
-   - Query: "sensitive skin vitamin c"
-   - Source: Product guides, ingredient glossary
+2. **Unstructured search** (Documents):
+   - Search: "glow serum vitamin c benefits"
+   - Find: Product guide with detailed info
+   - Find: Customer reviews/testimonials
 
-4. Compose response with product recommendations + context
+3. **Combine**:
+   - Product details from structured data (price, stock, variants)
+   - Rich description from unstructured content
+   - Complete, informative response
 
-5. Track: Which knowledge was used (for analytics)
-```
+### Confidence Scoring
 
-**Knowledge Confidence**:
-```
-High Confidence (90-100%):
-→ AI responds directly with information
+AI assesses confidence in its answers:
 
-Medium Confidence (70-89%):
-→ AI responds but may ask clarifying questions
+**High Confidence** (90-100%):
+- Found exact match in structured data
+- Or found clear, direct answer in document
+- Response: AI answers confidently
 
-Low Confidence (<70%):
-→ AI asks customer for clarification
-→ Or hands off to human if complex
-```
+**Medium Confidence** (70-89%):
+- Found related information, not exact
+- Or found answer but missing details
+- Response: AI answers but may ask clarifying questions
 
-**Citation Examples**:
-```
-Customer: "What's your return policy?"
+**Low Confidence** (<70%):
+- Couldn't find relevant information
+- Or found conflicting information
+- Response: AI says "I don't have that information, let me connect you with the team"
 
-AI: "We offer a 30-day return policy on all products.
-     Items must be unopened, unused, and in original
-     packaging.
-
-     To start a return, contact us at returns@myshop.com
-
-     📋 Source: Return Policy (updated Jan 1, 2026)"
-```
+**Factors Affecting Confidence**:
+- How well question matches knowledge base
+- How recent the information is
+- How complete the information is
+- Whether multiple sources agree
 
 ### Knowledge Gaps
 
-**Detecting Gaps**:
-The system tracks questions the AI couldn't answer well:
+When AI can't answer confidently, system tracks this:
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Knowledge Gaps (12 detected)                             │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                           │
-│  Common questions your AI doesn't have good answers for: │
-│                                                           │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │ "Are your products cruelty-free?"                  │ │
-│  │ Asked 23 times • AI confidence: 45%                │ │
-│  │ Suggestion: Add FAQ or policy                       │ │
-│  │ [Add FAQ] [Ignore]                                  │ │
-│  └────────────────────────────────────────────────────┘ │
-│                                                           │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │ "Do you offer samples?"                            │ │
-│  │ Asked 19 times • AI confidence: 38%                │ │
-│  │ Suggestion: Add FAQ                                 │ │
-│  │ [Add FAQ] [Ignore]                                  │ │
-│  └────────────────────────────────────────────────────┘ │
-│                                                           │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │ "What's the difference between serum and cream?"   │ │
-│  │ Asked 15 times • AI confidence: 52%                │ │
-│  │ Suggestion: Add to product guides                   │ │
-│  │ [Create Guide] [Ignore]                             │ │
-│  └────────────────────────────────────────────────────┘ │
-│                                                           │
-│  [View All Gaps] [Auto-Generate FAQs]                    │
-└──────────────────────────────────────────────────────────┘
-```
+**Gap Detection**:
+- Question asked: "Are your products cruelty-free?"
+- AI confidence: 45% (low)
+- Search results: No direct mention in documents
+- Action: Log as potential knowledge gap
 
-**Auto-Generate FAQs**:
-```
-┌──────────────────────────────────────────────────────────┐
-│  AI-Generated FAQ Suggestions                             │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                           │
-│  Based on 23 customer questions, we suggest:             │
-│                                                           │
-│  ┌─────────────────────────────────────────────────────┐│
-│  │ Q: Are your products cruelty-free?                  ││
-│  │                                                      ││
-│  │ Suggested Answer (edit as needed):                  ││
-│  │ "Yes, all our products are cruelty-free and        ││
-│  │  never tested on animals. We're certified by       ││
-│  │  Leaping Bunny."                                    ││
-│  │                                                      ││
-│  │ Confidence: High (based on product descriptions)    ││
-│  │                                                      ││
-│  │ [Edit Answer] [Add FAQ] [Skip]                      ││
-│  └─────────────────────────────────────────────────────┘│
-│                                                           │
-│  Progress: 1 of 3 suggestions                             │
-│  [Skip All] [Review All] [Next →]                        │
-└──────────────────────────────────────────────────────────┘
-```
+**Gap Analysis**:
+After 20+ similar questions with low confidence:
+- System identifies pattern
+- Suggests adding content
+- Can auto-generate FAQ from pattern
+
+**Example Gap Report**:
+"23 customers asked about cruelty-free products in the last 30 days. Your AI couldn't answer confidently because:
+- No document mentions animal testing
+- Products don't have 'cruelty-free' tag
+- No FAQ covers this topic
+
+Suggestion: Add an FAQ 'Are your products cruelty-free?' or add to policy documents"
+
+### Citation and Sources
+
+**When AI Cites Sources**:
+
+Strong factual claims get citations:
+- Policies (return terms, shipping times)
+- Specific product details
+- Prices and availability
+- Dates and deadlines
+
+**Citation Format**:
+"Per our Return Policy, items can be returned within 30 days..."
+"According to our Shipping Guide..."
+"This product contains vitamin C (from Product Catalog)..."
+
+**Why Citation Matters**:
+- Builds trust (shows answer is from official source)
+- Helps user verify information
+- Makes it clear info is from business, not AI invention
+
+**When AI Doesn't Cite**:
+- General, common knowledge responses
+- Conversational elements
+- Synthesized information from multiple sources
 
 ---
 
-## Success Metrics
+## Content Organization
 
-### Knowledge Base Health
+### Collections
 
-**Coverage Score** (0-100):
-- Products with descriptions: +20
-- FAQs for common questions: +30
-- Company policies documented: +20
-- Documents uploaded: +20
-- Custom models used: +10
+**What Are Collections?**:
 
-**Quality Score** (0-100):
-- AI successfully answers questions: +40
-- Low handoff rate: +30
-- Customer satisfaction with answers: +20
-- Up-to-date information: +10
+Collections are containers for grouping related knowledge. Think of them as folders or categories.
 
-**Overall Health**:
+**Why Use Collections**:
+
+**Organization**:
+- Keep related content together
+- Easier to find and manage
+- Clear structure for you and AI
+
+**Access Control** (future):
+- Some collections public, others private
+- Control which agents see which collections
+
+**Search Scoping**:
+- AI can search specific collections
+- More precise results
+- Faster searches
+
+**Example Collection Structure**:
+
 ```
-┌──────────────────────────────────────────────────────────┐
-│  Knowledge Base Health                                    │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                           │
-│  Overall Score: 87/100 ⭐⭐⭐⭐                           │
-│                                                           │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │ Coverage: 92/100 ⭐⭐⭐⭐⭐                         │ │
-│  │ Great! Your AI has comprehensive knowledge         │ │
-│  └────────────────────────────────────────────────────┘ │
-│                                                           │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │ Quality: 84/100 ⭐⭐⭐⭐                            │ │
-│  │ Good! Answers are accurate and helpful             │ │
-│  └────────────────────────────────────────────────────┘ │
-│                                                           │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │ Freshness: 78/100 ⭐⭐⭐⭐                          │ │
-│  │ Some content is outdated                            │ │
-│  │ → 3 documents haven't been updated in 90+ days     │ │
-│  └────────────────────────────────────────────────────┘ │
-│                                                           │
-│  [View Detailed Report] [Improve Score]                  │
-└──────────────────────────────────────────────────────────┘
+Your Knowledge Base
+│
+├── Product Information
+│   ├── Product Catalog (structured: products)
+│   ├── Product Guides (unstructured: documents)
+│   └── Ingredient Glossary (unstructured: document)
+│
+├── Customer Support
+│   ├── FAQs (structured: FAQ model)
+│   ├── Policies (structured: policy model)
+│   └── Help Articles (unstructured: documents)
+│
+├── Company Information
+│   ├── Store Locations (structured: custom model)
+│   ├── Team Bios (structured: custom model)
+│   └── Brand Story (unstructured: document)
+│
+└── Internal Knowledge (private)
+    ├── Training Materials (unstructured: documents)
+    └── Procedures (unstructured: documents)
 ```
 
-### Performance Metrics
+### Tagging and Categorization
 
-**AI Answer Rate**:
-- % of questions AI answers without handoff
-- Target: 80%+ for businesses with good knowledge base
+**Tags on Documents**:
 
-**Knowledge Usage**:
-- Which content is used most
-- Which content is never used (consider removing)
-- Search patterns
+Add tags to documents for better discovery:
+- Product-related: "skincare", "haircare", "makeup"
+- Topic: "how-to", "ingredient-guide", "troubleshooting"
+- Audience: "beginner", "advanced", "professional"
+- Season: "summer-2026", "holiday", "back-to-school"
 
-**Customer Satisfaction**:
-- Thumbs up/down on AI responses
-- Feedback: "Was this answer helpful?"
-- Track improvement over time
+**Auto-Tagging**:
+System can suggest tags based on content:
+- Extracts keywords from document
+- Identifies mentioned products/brands
+- Detects document type (guide, policy, FAQ)
 
-**Example Report**:
-```
-┌──────────────────────────────────────────────────────────┐
-│  Knowledge Base Analytics - Last 30 Days                 │
-│  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │
-│                                                           │
-│  ┌────────────┬────────────┬────────────┬────────────┐  │
-│  │  Questions │  AI        │  Handoffs  │  Customer  │  │
-│  │  Handled   │  Answered  │  to Human  │  Satisfied │  │
-│  │            │            │            │            │  │
-│  │   1,247    │    1,089   │     158    │    92%     │  │
-│  │  ↑ 23%     │   ↑ 28%    │  ↓ 12%     │  ↑ 3%      │  │
-│  └────────────┴────────────┴────────────┴────────────┘  │
-│                                                           │
-│  Most Used Knowledge:                                     │
-│  1. Product catalog - 423 queries                        │
-│  2. FAQ "Shipping time" - 127 uses                       │
-│  3. Return Policy - 89 uses                              │
-│  4. Product Guide "Skincare Routine" - 67 uses           │
-│  5. FAQ "Tracking order" - 54 uses                       │
-│                                                           │
-│  Trending Questions:                                      │
-│  ↑ "Are products vegan?" (+45%)                          │
-│  ↑ "Gift wrapping available?" (+32%)                     │
-│  ↓ "International shipping?" (-15%)                      │
-│                                                           │
-│  [View Full Report] [Export Data]                        │
-└──────────────────────────────────────────────────────────┘
-```
+You review and approve suggested tags.
+
+**Categories on Structured Data**:
+
+Models can have category fields:
+- Products → Category: Skincare, Makeup, Haircare
+- FAQs → Category: Shipping, Returns, Account
+- Locations → Type: Retail Store, Warehouse, Office
+
+**Metadata for All Content**:
+
+Everything has metadata:
+- Created date
+- Last updated date
+- Created by (user)
+- Source (upload, URL, API)
+- Language
+- Status (active, archived, draft)
+
+### Search and Discovery
+
+**For You (Managing Content)**:
+
+Find content you need to update:
+- Search by title, keyword, tag
+- Filter by type (document, product, FAQ)
+- Filter by date (recent, outdated)
+- Filter by usage (frequently used by AI, never used)
+
+**For AI (Finding Answers)**:
+
+AI searches more sophisticatedly:
+- Semantic search (meaning, not just keywords)
+- Filters by relevance to customer question
+- Considers recency (newer info preferred)
+- Combines multiple sources
+
+### Content Lifecycle
+
+**Drafts**:
+- Create content but don't publish to AI yet
+- Preview how AI would use it
+- Share with team for review
+- Publish when ready
+
+**Active**:
+- Published and available to AI
+- AI uses in conversations
+- Can edit anytime (changes immediate)
+
+**Archived**:
+- No longer current but kept for records
+- AI doesn't use in new conversations
+- Can restore if needed
+
+**Deleted**:
+- Removed completely
+- Can soft-delete (recoverable for 30 days)
+- Or hard-delete (permanent)
+
+**Outdated Content Detection**:
+
+System warns about stale content:
+- "Shipping Policy hasn't been updated in 18 months"
+- "Product Guide PDF uploaded in 2024, may be outdated"
+- "FAQ answered 0 times in last 90 days (unused)"
+
+Helps keep knowledge fresh and relevant.
+
+---
+
+## Real-World Workflows
+
+### Workflow 1: Setting Up Product Knowledge (Beauty Brand)
+
+**Scenario**: New beauty brand launching with 15 products
+
+**Day 1: Add Products (Structured)**
+- Use predefined Product model
+- Add 15 products with basic info:
+  - Name, price, description
+  - Category (serum, cream, cleanser, etc.)
+  - Tags (vitamin-c, hydrating, anti-aging, etc.)
+- Method: Form entry (small number of products)
+- Time: ~30 minutes
+- Result: AI can answer "what products do you have", check prices, filter by type
+
+**Day 2: Add Product Details (Unstructured)**
+- Upload product guide PDF (20 pages covering all products)
+- Document includes: ingredients, how to use, skin types, benefits
+- System processes, creates searchable chunks
+- Time: 5 minutes upload, 10 minutes to process
+- Result: AI can answer detailed questions about ingredients, usage, skin compatibility
+
+**Day 3: Add FAQs**
+- Create 10 common FAQs using FAQ model:
+  - Shipping questions
+  - Return policy
+  - Product usage
+  - Skin concerns
+- Time: 20 minutes
+- Result: AI handles repeat questions automatically
+
+**Week 2: Monitor and Improve**
+- Review knowledge gaps report
+- See customers asking "are products vegan?" (15 times)
+- Add FAQ "Are products vegan/cruelty-free?"
+- Update product tags to include "vegan" where applicable
+- Result: Gap closed, AI now answers confidently
+
+**Month 2: Expand**
+- Add blog posts about skincare routines (sync from website)
+- Add ingredient glossary document
+- Create custom model for "Skin Concerns" with product recommendations
+- Result: AI becomes expert consultant, not just order-taker
+
+### Workflow 2: Managing Large Catalog (E-commerce)
+
+**Scenario**: Online shop with 500+ products across multiple brands
+
+**Initial Setup: Bulk Product Import**
+- Export products from e-commerce platform (Shopify/WooCommerce)
+- Get CSV with 523 products
+- Create Product model with fields mapped to CSV columns
+- Import CSV
+- System validates and imports all products
+- Time: 30 minutes setup, 10 minutes import
+- Result: AI knows entire catalog immediately
+
+**Organizing Products**
+- Products have categories and subcategories
+- Add brands as separate field
+- Tag products with features (waterproof, vegan, fragrance-free, etc.)
+- Result: AI can filter and search precisely
+
+**Keeping Catalog Current**
+- Option 1: Manual updates
+  - Edit products individually as they change
+  - Or export-edit-import monthly
+
+- Option 2: API integration (future)
+  - Sync with e-commerce platform automatically
+  - Changes in Shopify → auto-update Knowledge Base
+
+**Adding Rich Content**
+- Import brand stories (15 PDFs, one per brand)
+- Sync help center articles (website sync)
+- Add buying guides (documents)
+- Result: AI can explain brand differences, help customers choose
+
+### Workflow 3: Service Business (Spa/Salon)
+
+**Scenario**: Spa with services, policies, and appointment booking
+
+**Setup: Custom Model for Services**
+- Create "Services" model with fields:
+  - Service name, description, duration, price
+  - Category (facial, massage, body treatment)
+  - Therapist specializations needed
+  - Preparation instructions
+  - Contraindications
+
+- Add 25 services
+- Time: 1 hour
+- Result: AI can describe services, recommend based on needs, explain what to expect
+
+**Policies as Structured Data**
+- Use Policy model for:
+  - Cancellation policy
+  - Late arrival policy
+  - Gift card terms
+  - COVID safety protocols
+
+- Time: 30 minutes
+- Result: AI answers policy questions accurately
+
+**Treatment Details as Documents**
+- Upload detailed treatment descriptions (PDFs)
+- Include: step-by-step process, benefits, aftercare
+- Upload FAQ PDF from website
+- Time: 10 minutes
+- Result: AI can walk customers through what to expect, answer nervous first-timer questions
+
+**Team Profiles**
+- Create custom "Team Members" model
+- Add therapists with: name, bio, specializations, certifications
+- Time: 30 minutes
+- Result: AI can recommend therapist based on customer needs ("who specializes in sports massage?")
+
+### Workflow 4: Evolving Knowledge Base
+
+**Scenario**: Knowledge base that grows with business
+
+**Month 1: Basics**
+- Products, top 5 FAQs, return policy
+- AI handle rate: 65%
+
+**Month 3: Fill Gaps**
+- Review knowledge gap reports
+- Add 15 more FAQs based on actual customer questions
+- Upload shipping guide (document)
+- AI handle rate: 75%
+
+**Month 6: Deepen Knowledge**
+- Add how-to guides (documents)
+- Create custom model for promotions (current sales)
+- Sync blog for SEO content
+- AI handle rate: 82%
+
+**Month 12: Optimize**
+- Archive unused FAQs
+- Update outdated documents
+- Reorganize collections
+- Add seasonal content
+- AI handle rate: 88%
+
+**Ongoing: Maintenance**
+- Monthly: Review gaps, add missing knowledge
+- Quarterly: Update policies, remove outdated content
+- When launching: Add new products/services immediately
+- Maintain: 85-90% AI handle rate
 
 ---
 
 ## Summary
 
-### Key Benefits
+### Key Principles
 
-**For Users**:
-- ✅ AI gives accurate, business-specific answers
-- ✅ Teach AI once, works across all conversations
-- ✅ Reduced handoffs to human
-- ✅ Better customer experience
-- ✅ Consistent information
+**Unstructured Content**:
+- Great for narratives, explanations, existing documents
+- Upload → process → chunk → searchable
+- AI searches semantically and cites sources
+- Keep content clear, comprehensive, current
 
-**For Business**:
-- 📈 Higher AI handle rate (80%+ vs 40% without)
-- ⏰ Time saved (fewer repetitive questions)
-- 💰 Better conversion (instant, accurate answers)
-- 📊 Insights into customer questions
-- 🔄 Easy to update and maintain
+**Structured Data**:
+- Great for precise facts, filterable information
+- Define model → add records → AI queries exactly
+- Predefined models for common needs
+- Custom models for unique business data
+
+**Together**:
+- Use both for comprehensive knowledge
+- Structured for facts, unstructured for context
+- AI combines both for complete answers
 
 ### Best Practices
 
-1. **Start Simple**: Products + top 5 FAQs + return policy
-2. **Add Gradually**: Build knowledge base as questions arise
-3. **Keep Updated**: Review and update quarterly
-4. **Monitor Gaps**: Watch for unanswered questions
-5. **Use Analytics**: See what's working, what's not
+1. **Start Simple**: Core products + top FAQs + key policies
+2. **Build Incrementally**: Add knowledge as questions arise
+3. **Monitor Gaps**: Let customers tell you what's missing
+4. **Keep Current**: Review and update quarterly
+5. **Organize Well**: Use collections, tags, categories
+6. **Quality Over Quantity**: Better to have 10 great docs than 100 mediocre ones
 
-### Progressive Enhancement
+### Expected Outcomes
 
-**Week 1**: Products only → 60% AI handle rate
-**Month 1**: + Top 10 FAQs → 70% AI handle rate
-**Month 3**: + Policies + guides → 80% AI handle rate
-**Month 6**: + Custom models + sync → 85%+ AI handle rate
+**AI Performance Improvement**:
+- No knowledge base: 40-50% handle rate
+- Basic setup: 65-70% handle rate
+- Comprehensive setup: 80-90% handle rate
+
+**Time Investment**:
+- Initial setup: 2-4 hours
+- Monthly maintenance: 1-2 hours
+- ROI: Significant time saved on repetitive questions
 
 ---
 
-**Document Status**: Draft v1.0
+**Document Status**: Draft v2.0
 **Last Updated**: 2026-01-11
-**Next Steps**: User testing, UI design, analytics framework
+**Next Steps**: User testing on model creation flows, validate workflows
 **Owner**: Product Team
